@@ -12,6 +12,7 @@ struct TerminalWorkbenchView: View {
             VStack(alignment: .leading, spacing: 18) {
                 connectionCard
                 terminalCard
+                manualCommandCard
                 aiPromptCard
 
                 if let plan = viewModel.aiPlan {
@@ -71,7 +72,7 @@ struct TerminalWorkbenchView: View {
 
     private var terminalCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("终端")
+            Text("终端输出")
                 .font(.headline)
 
             Text(viewModel.terminalOutput)
@@ -88,12 +89,40 @@ struct TerminalWorkbenchView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
+    private var manualCommandCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("手动命令")
+                .font(.headline)
+
+            Text("你可以直接输入命令并执行。这里不会经过 AI。")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            TextField("例如：uname -a", text: $viewModel.manualCommand, axis: .vertical)
+                .lineLimit(1...4)
+                .font(.system(.body, design: .monospaced))
+                .padding(12)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            Button("执行命令") {
+                Task { await viewModel.runManualCommand() }
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(viewModel.manualCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isBusy)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
     private var aiPromptCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("AI 运维")
                 .font(.headline)
 
-            Text("描述你遇到的问题。OpsAI 会先生成命令草稿，不会自动直接发送和执行。")
+            Text("描述你遇到的问题。OpsAI 会先生成命令草稿，不会自动直接执行。")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 

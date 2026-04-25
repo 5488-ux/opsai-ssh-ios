@@ -7,6 +7,7 @@ final class TerminalSessionViewModel: ObservableObject {
     @Published var isConnected = false
     @Published var isBusy = false
     @Published var aiPrompt = ""
+    @Published var manualCommand = ""
     @Published var aiPlan: AIPlan?
     @Published var draftingCommandIDs: Set<UUID> = []
     @Published var errorMessage: String?
@@ -59,7 +60,10 @@ final class TerminalSessionViewModel: ObservableObject {
 
     func generatePlan() async {
         let trimmedGoal = aiPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedGoal.isEmpty else { return }
+        guard !trimmedGoal.isEmpty else {
+            errorMessage = "请先输入你要排查的问题。"
+            return
+        }
 
         isBusy = true
         errorMessage = nil
@@ -75,6 +79,31 @@ final class TerminalSessionViewModel: ObservableObject {
             )
             aiPlan = plan
             await animateDrafting(for: plan.commands)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func runManualCommand() async {
+        let command = manualCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !command.isEmpty else {
+            errorMessage = "请输入要执行的命令。"
+            return
+        }
+
+        guard isConnected else {
+            errorMessage = "请先连接服务器。"
+            return
+        }
+
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+
+        do {
+            let output = try await sshService.execute(command)
+            appendOutput(output)
+            manualCommand = ""
         } catch {
             errorMessage = error.localizedDescription
         }

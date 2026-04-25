@@ -21,6 +21,7 @@ struct AIProviderConfig: Codable, Equatable {
         不要假设自己有执行权限。
         优先给出安全的只读命令。
         除非用户明确要求，否则不要生成破坏性命令。
+        返回内容必须简洁、可执行、可审核。
         """,
         requireApprovalPerCommand: true
     )

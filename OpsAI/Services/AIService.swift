@@ -50,39 +50,40 @@ final class AIService: AIServiceProtocol {
             return fallbackPlan(goal: goal, server: server)
         }
 
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 60
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(trimmedKey)", forHTTPHeaderField: "Authorization")
-        request.httpBody = try JSONEncoder().encode(
-            DeepSeekChatRequest(
-                model: config.model,
-                response_format: .init(type: "json_object"),
-                messages: [
-                    .init(role: "system", content: [
+        let requestBody = DeepSeekChatRequest(
+            model: config.model,
+            response_format: .init(type: "json_object"),
+            messages: [
+                .init(
+                    role: "system",
+                    content: [
                         config.systemPrompt,
                         "你必须只返回 JSON 对象。",
                         "返回格式必须是：",
                         "{\"summary\":\"字符串\",\"commands\":[{\"command\":\"字符串\",\"reason\":\"字符串\",\"riskLevel\":\"low|medium|high\"}]}",
                         "commands 数量限制为 1 到 4 条。",
                         "优先生成只读命令。",
-                        "不要返回 markdown 代码块。"
-                    ].joined(separator: "\n")),
-                    .init(
-                        role: "user",
-                        content: [
-                            "目标服务器：\(server.username)@\(server.host):\(server.port)",
-                            "用户诉求：\(goal)"
-                        ].joined(separator: "\n")
-                    )
-                ],
-                temperature: 0.2
-            )
+                        "不要返回 markdown 代码块。",
+                        "riskLevel 只能是 low、medium、high。"
+                    ].joined(separator: "\n")
+                ),
+                .init(
+                    role: "user",
+                    content: [
+                        "目标服务器：\(server.username)@\(server.host):\(server.port)",
+                        "用户诉求：\(goal)"
+                    ].joined(separator: "\n")
+                )
+            ],
+            temperature: 0.2
         )
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try validateHTTPResponse(data: data, response: response)
+        let data = try await sendRequest(
+            url: endpoint,
+            method: "POST",
+            apiKey: trimmedKey,
+            body: requestBody
+        )
 
         let completion = try JSONDecoder().decode(DeepSeekChatResponse.self, from: data)
         guard let rawContent = completion.choices.first?.message.content,
@@ -120,14 +121,7 @@ final class AIService: AIServiceProtocol {
             throw AIServiceError.missingAPIKey
         }
 
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "GET"
-        request.timeoutInterval = 30
-        request.setValue("Bearer \(trimmedKey)", forHTTPHeaderField: "Authorization")
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try validateHTTPResponse(data: data, response: response)
-
+        let data = try await sendRequest(url: endpoint, method: "GET", apiKey: trimmedKey, body: Optional<EmptyBody>.none)
         let modelList = try JSONDecoder().decode(DeepSeekModelsResponse.self, from: data)
         let modelIDs = modelList.data.map(\.id)
 
@@ -141,6 +135,27 @@ final class AIService: AIServiceProtocol {
 
         let preview = modelIDs.prefix(5).joined(separator: "、")
         return "API 已连通，但当前模型 \(config.model) 不在返回列表中。可用模型示例：\(preview)"
+    }
+
+    private func sendRequest<Body: Encodable>(
+        url: URL,
+        method: String,
+        apiKey: String,
+        body: Body?
+    ) async throws -> Data {
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.timeoutInterval = 60
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+
+        if let body {
+            request.httpBody = try JSONEncoder().encode(body)
+        }
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateHTTPResponse(data: data, response: response)
+        return data
     }
 
     private func validateHTTPResponse(data: Data, response: URLResponse) throws {
@@ -215,6 +230,8 @@ final class AIService: AIServiceProtocol {
         )
     }
 }
+
+private struct EmptyBody: Encodable {}
 
 private struct DeepSeekChatRequest: Encodable {
     struct Message: Encodable {
