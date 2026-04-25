@@ -7,3 +7,7 @@ xcuserdata/
 *.xcuserstate
 Secrets.xcconfig
 Pods/
+compat-cert.p12
+compat-cert.pem
+ios-cert.pem
+ios-key.pem

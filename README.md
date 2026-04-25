@@ -41,6 +41,8 @@ Signed IPA packaging is prepared in `.github/workflows/ios-build.yml`. Add these
 - `IOS_TEAM_ID`
 - `IOS_BUNDLE_ID`
 - `IOS_PROFILE_NAME`
+- `IOS_CERT_PEM_BASE64`
+- `IOS_KEY_PEM_BASE64`
 
 ## Next build milestone
 

@@ -16,6 +16,8 @@ jobs:
       IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
       IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
       IOS_PROFILE_NAME: ${{ secrets.IOS_PROFILE_NAME }}
+      IOS_CERT_PEM_BASE64: ${{ secrets.IOS_CERT_PEM_BASE64 }}
+      IOS_KEY_PEM_BASE64: ${{ secrets.IOS_KEY_PEM_BASE64 }}
 
     steps:
       - name: Checkout
@@ -37,21 +39,24 @@ jobs:
             build
 
       - name: Prepare signing assets
-        if: ${{ env.IOS_P12_BASE64 != '' && env.IOS_MOBILEPROVISION_BASE64 != '' && env.IOS_TEAM_ID != '' && env.IOS_P12_PASSWORD != '' && env.IOS_BUNDLE_ID != '' && env.IOS_PROFILE_NAME != '' }}
+        if: ${{ env.IOS_CERT_PEM_BASE64 != '' && env.IOS_KEY_PEM_BASE64 != '' && env.IOS_MOBILEPROVISION_BASE64 != '' && env.IOS_TEAM_ID != '' && env.IOS_BUNDLE_ID != '' && env.IOS_PROFILE_NAME != '' }}
         run: |
           mkdir -p $RUNNER_TEMP/signing
-          echo "$IOS_P12_BASE64" | base64 --decode > $RUNNER_TEMP/signing/certificate.p12
-          echo "$IOS_MOBILEPROVISION_BASE64" | base64 --decode > $RUNNER_TEMP/signing/profile.mobileprovision
+          printf '%s' "$IOS_CERT_PEM_BASE64" | base64 --decode > $RUNNER_TEMP/signing/certificate.pem
+          printf '%s' "$IOS_KEY_PEM_BASE64" | base64 --decode > $RUNNER_TEMP/signing/private_key.pem
+          printf '%s' "$IOS_MOBILEPROVISION_BASE64" | base64 --decode > $RUNNER_TEMP/signing/profile.mobileprovision
 
           security create-keychain -p runner build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p runner build.keychain
-          security import $RUNNER_TEMP/signing/certificate.p12 -k build.keychain -P "$IOS_P12_PASSWORD" -T /usr/bin/codesign
+          security import $RUNNER_TEMP/signing/certificate.pem -k build.keychain -T /usr/bin/codesign
+          security import $RUNNER_TEMP/signing/private_key.pem -k build.keychain -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k runner build.keychain
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $RUNNER_TEMP/signing/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Archive app
-        if: ${{ env.IOS_P12_BASE64 != '' && env.IOS_MOBILEPROVISION_BASE64 != '' && env.IOS_TEAM_ID != '' && env.IOS_P12_PASSWORD != '' && env.IOS_BUNDLE_ID != '' && env.IOS_PROFILE_NAME != '' }}
+        if: ${{ env.IOS_CERT_PEM_BASE64 != '' && env.IOS_KEY_PEM_BASE64 != '' && env.IOS_MOBILEPROVISION_BASE64 != '' && env.IOS_TEAM_ID != '' && env.IOS_BUNDLE_ID != '' && env.IOS_PROFILE_NAME != '' }}
         run: |
           xcodebuild \
             -project OpsAI.xcodeproj \
@@ -65,7 +70,7 @@ jobs:
             archive
 
       - name: Export IPA
-        if: ${{ env.IOS_P12_BASE64 != '' && env.IOS_MOBILEPROVISION_BASE64 != '' && env.IOS_TEAM_ID != '' && env.IOS_P12_PASSWORD != '' && env.IOS_BUNDLE_ID != '' && env.IOS_PROFILE_NAME != '' }}
+        if: ${{ env.IOS_CERT_PEM_BASE64 != '' && env.IOS_KEY_PEM_BASE64 != '' && env.IOS_MOBILEPROVISION_BASE64 != '' && env.IOS_TEAM_ID != '' && env.IOS_BUNDLE_ID != '' && env.IOS_PROFILE_NAME != '' }}
         run: |
           cat > $RUNNER_TEMP/ExportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -105,7 +110,7 @@ jobs:
             project.yml
 
       - name: Upload IPA
-        if: ${{ success() && env.IOS_P12_BASE64 != '' && env.IOS_MOBILEPROVISION_BASE64 != '' && env.IOS_TEAM_ID != '' && env.IOS_P12_PASSWORD != '' && env.IOS_BUNDLE_ID != '' && env.IOS_PROFILE_NAME != '' }}
+        if: ${{ success() && env.IOS_CERT_PEM_BASE64 != '' && env.IOS_KEY_PEM_BASE64 != '' && env.IOS_MOBILEPROVISION_BASE64 != '' && env.IOS_TEAM_ID != '' && env.IOS_BUNDLE_ID != '' && env.IOS_PROFILE_NAME != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: opsai-ipa
