@@ -5,6 +5,7 @@ import Foundation
 final class AppStore: ObservableObject {
     @Published var servers: [SSHServer]
     @Published var providerConfig: AIProviderConfig
+    @Published var issueEntries: [AppIssueEntry]
 
     private let storage: AppStorageService
     private let keychain: KeychainStore
@@ -17,6 +18,7 @@ final class AppStore: ObservableObject {
         self.keychain = keychain
         self.servers = storage.loadServers()
         self.providerConfig = storage.loadProviderConfig()
+        self.issueEntries = storage.loadIssueEntries()
 
         if providerConfig.apiKeyReference == nil {
             providerConfig.apiKeyReference = AIProviderConfig.defaultAPIKeyReference
@@ -86,6 +88,22 @@ final class AppStore: ObservableObject {
 
     func providerAPIKey() -> String? {
         secret(for: providerConfig.apiKeyReference)
+    }
+
+    func recordIssue(_ message: String, source: String) {
+        let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedSource = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedMessage.isEmpty, !trimmedSource.isEmpty else { return }
+
+        let entry = AppIssueEntry(source: trimmedSource, message: trimmedMessage)
+        issueEntries.insert(entry, at: 0)
+        issueEntries = Array(issueEntries.prefix(50))
+        storage.saveIssueEntries(issueEntries)
+    }
+
+    func clearIssueEntries() {
+        issueEntries = []
+        storage.saveIssueEntries(issueEntries)
     }
 
     private func bootstrapLocalAIConfigIfNeeded() {

@@ -65,7 +65,7 @@ final class TerminalSessionViewModel: ObservableObject {
             appendOutput("已连接到 \(server.host):\(server.port)，登录用户：\(server.username)。")
         } catch {
             isConnected = false
-            errorMessage = error.localizedDescription
+            setError(error.localizedDescription)
         }
     }
 
@@ -96,7 +96,7 @@ final class TerminalSessionViewModel: ObservableObject {
     func analyzeTerminalOutput() async {
         let excerpt = recentTerminalExcerpt()
         guard !excerpt.isEmpty else {
-            errorMessage = "当前还没有可供分析的终端输出。"
+            setError("当前还没有可供分析的终端输出。")
             return
         }
 
@@ -109,7 +109,7 @@ final class TerminalSessionViewModel: ObservableObject {
     func analyzeExecutionOutput(_ output: String, sourceLabel: String) async {
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            errorMessage = "当前还没有可供分析的执行结果。"
+            setError("当前还没有可供分析的执行结果。")
             return
         }
 
@@ -127,7 +127,7 @@ final class TerminalSessionViewModel: ObservableObject {
 
     func runDiagnosticTool(_ tool: AIDiagnosticTool, analyzeAfterRun: Bool) async {
         guard isConnected else {
-            errorMessage = "请先连接服务器。"
+            setError("请先连接服务器。")
             return
         }
 
@@ -150,14 +150,14 @@ final class TerminalSessionViewModel: ObservableObject {
 
         let combinedOutput = outputs.joined(separator: "\n\n")
         guard !combinedOutput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "工具没有返回任何结果。"
+            setError("工具没有返回任何结果。")
             return
         }
 
         appendOutput("## 工具：\(tool.displayName)\n\(combinedOutput)")
 
         if !failures.isEmpty {
-            errorMessage = "工具已运行，但有部分命令失败。"
+            setError("工具已运行，但有部分命令失败。")
         }
 
         guard analyzeAfterRun else { return }
@@ -177,12 +177,12 @@ final class TerminalSessionViewModel: ObservableObject {
     func runManualCommand() async {
         let command = manualCommand.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !command.isEmpty else {
-            errorMessage = "请输入要执行的命令。"
+            setError("请输入要执行的命令。")
             return
         }
 
         guard isConnected else {
-            errorMessage = "请先连接服务器。"
+            setError("请先连接服务器。")
             return
         }
 
@@ -195,7 +195,7 @@ final class TerminalSessionViewModel: ObservableObject {
             appendOutput(output)
             manualCommand = ""
         } catch {
-            errorMessage = error.localizedDescription
+            setError(error.localizedDescription)
         }
     }
 
@@ -206,7 +206,7 @@ final class TerminalSessionViewModel: ObservableObject {
         }
 
         guard isConnected else {
-            errorMessage = "请先连接服务器。"
+            setError("请先连接服务器。")
             return
         }
 
@@ -223,7 +223,7 @@ final class TerminalSessionViewModel: ObservableObject {
             plansByAssistant[selectedAssistant] = mutablePlan
             appendOutput(output)
         } catch {
-            errorMessage = error.localizedDescription
+            setError(error.localizedDescription)
         }
     }
 
@@ -262,7 +262,7 @@ final class TerminalSessionViewModel: ObservableObject {
     private func submitAIOpsPrompt(_ prompt: String, visibleUserText: String? = nil) async {
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedPrompt.isEmpty else {
-            errorMessage = "请先输入你要排查的问题。"
+            setError("请先输入你要排查的问题。")
             return
         }
 
@@ -303,7 +303,7 @@ final class TerminalSessionViewModel: ObservableObject {
                 await animateDrafting(for: commands)
             }
         } catch {
-            errorMessage = error.localizedDescription
+            setError(error.localizedDescription)
         }
     }
 
@@ -323,5 +323,10 @@ final class TerminalSessionViewModel: ObservableObject {
 
     private static func makeDefaultConversation(for assistant: AIAssistantProfile) -> [AIOpsChatMessage] {
         [.init(role: .assistant, text: assistant.introMessage)]
+    }
+
+    private func setError(_ message: String) {
+        errorMessage = message
+        appStore.recordIssue(message, source: "终端 / \(server.displayTitle)")
     }
 }

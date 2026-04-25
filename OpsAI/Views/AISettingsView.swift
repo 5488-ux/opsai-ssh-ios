@@ -90,23 +90,23 @@ struct AISettingsView: View {
             try appStore.saveProviderConfig(config, apiKey: apiKey)
             testMessage = "配置已保存。"
         } catch {
-            errorMessage = error.localizedDescription
+            setError(error.localizedDescription)
         }
     }
 
     private func validateInputs() -> Bool {
         guard !config.providerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "提供方名称不能为空。"
+            setError("提供方名称不能为空。")
             return false
         }
 
         guard !config.baseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "接口地址不能为空。"
+            setError("接口地址不能为空。")
             return false
         }
 
         guard !config.model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "模型不能为空。"
+            setError("模型不能为空。")
             return false
         }
 
@@ -126,7 +126,12 @@ struct AISettingsView: View {
             let message = try await aiService.testConnection(config: config, apiKey: apiKey)
             testMessage = message
         } catch {
-            errorMessage = error.localizedDescription
+            setError(error.localizedDescription)
         }
+    }
+
+    private func setError(_ message: String) {
+        errorMessage = message
+        appStore.recordIssue(message, source: "AI 设置")
     }
 }

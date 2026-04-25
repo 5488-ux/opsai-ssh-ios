@@ -96,23 +96,23 @@ struct ServerEditorView: View {
         errorMessage = nil
 
         guard !server.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "主机地址不能为空。"
+            setError("主机地址不能为空。")
             return
         }
         guard !server.username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "用户名不能为空。"
+            setError("用户名不能为空。")
             return
         }
         guard (1...65535).contains(server.port) else {
-            errorMessage = "端口必须在 1 到 65535 之间。"
+            setError("端口必须在 1 到 65535 之间。")
             return
         }
         guard server.authenticationMethod != .privateKey else {
-            errorMessage = "当前版本暂不支持私钥登录，请改用密码登录。"
+            setError("当前版本暂不支持私钥登录，请改用密码登录。")
             return
         }
         guard !password.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "密码不能为空。"
+            setError("密码不能为空。")
             return
         }
 
@@ -124,7 +124,12 @@ struct ServerEditorView: View {
             )
             dismiss()
         } catch {
-            errorMessage = error.localizedDescription
+            setError(error.localizedDescription)
         }
+    }
+
+    private func setError(_ message: String) {
+        errorMessage = message
+        appStore.recordIssue(message, source: server.displayTitle.isEmpty ? "服务器编辑" : "服务器编辑 / \(server.displayTitle)")
     }
 }

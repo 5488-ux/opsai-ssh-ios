@@ -12,6 +12,11 @@ struct RootView: View {
                 .tabItem {
                     Label("AI 设置", systemImage: "sparkles.rectangle.stack")
                 }
+
+            MyView()
+                .tabItem {
+                    Label("我的", systemImage: "person.crop.circle")
+                }
         }
     }
 }
