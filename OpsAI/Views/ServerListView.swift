@@ -7,6 +7,7 @@ struct ServerListView: View {
     )
     @State private var terminalServer: SSHServer?
     @State private var isPresentingEditor = false
+    @State private var isPresentingSettings = false
 
     var body: some View {
         NavigationStack {
@@ -86,19 +87,30 @@ struct ServerListView: View {
             .navigationTitle("OpsAI")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        editorServer = SSHServer(
-                            passwordReference: "server.password.\(UUID().uuidString)",
-                            privateKeyReference: "server.key.\(UUID().uuidString)"
-                        )
-                        isPresentingEditor = true
-                    } label: {
-                        Image(systemName: "plus")
+                    HStack {
+                        Button {
+                            isPresentingSettings = true
+                        } label: {
+                            Image(systemName: "gearshape")
+                        }
+
+                        Button {
+                            editorServer = SSHServer(
+                                passwordReference: "server.password.\(UUID().uuidString)",
+                                privateKeyReference: "server.key.\(UUID().uuidString)"
+                            )
+                            isPresentingEditor = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
                     }
                 }
             }
             .sheet(isPresented: $isPresentingEditor) {
                 ServerEditorView(server: editorServer)
+            }
+            .sheet(isPresented: $isPresentingSettings) {
+                AppSettingsView()
             }
             .navigationDestination(item: $terminalServer) { server in
                 TerminalWorkbenchView(viewModel: TerminalSessionViewModel(server: server, appStore: appStore))
