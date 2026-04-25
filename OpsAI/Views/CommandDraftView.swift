@@ -36,7 +36,7 @@ struct CommandDraftView: View {
                 if draft.approvedAt != nil {
                     Label("已执行", systemImage: "checkmark.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(OpsAITheme.cyan)
                 } else if isDrafting {
                     Label("生成中", systemImage: "pencil.line")
                         .font(.caption)
@@ -46,19 +46,20 @@ struct CommandDraftView: View {
 
             Text(draft.reason)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(OpsAITheme.mutedText)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("命令")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(OpsAITheme.mutedText)
 
                 TextField("", text: $editableCommand, axis: .vertical)
                     .lineLimit(1...4)
                     .font(.system(.body, design: .monospaced))
                     .padding(12)
-                    .background(Color(.secondarySystemBackground))
+                    .background(OpsAITheme.cardElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .foregroundStyle(OpsAITheme.text)
                     .disabled(draft.approvedAt != nil)
                     .onChange(of: editableCommand) { _, newValue in
                         onChange(newValue)
@@ -79,7 +80,7 @@ struct CommandDraftView: View {
                     HStack {
                         Text("执行结果")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(OpsAITheme.mutedText)
 
                         Spacer()
 
@@ -93,18 +94,20 @@ struct CommandDraftView: View {
                     Text(output)
                         .font(.system(.footnote, design: .monospaced))
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .foregroundStyle(OpsAITheme.cyan)
                 }
                 .padding(12)
-                .background(Color(.secondarySystemBackground))
+                .background(OpsAITheme.deepNavy.opacity(0.95))
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
+        .foregroundStyle(OpsAITheme.text)
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(OpsAITheme.cardElevated)
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(Color(.separator), lineWidth: 1)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
     }
 
@@ -122,7 +125,7 @@ struct CommandDraftView: View {
     private var riskColor: Color {
         switch draft.riskLevel {
         case .low:
-            return .green
+            return OpsAITheme.cyan
         case .medium:
             return .orange
         case .high:

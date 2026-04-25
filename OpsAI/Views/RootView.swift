@@ -18,5 +18,6 @@ struct RootView: View {
                     Label("我的", systemImage: "person.crop.circle")
                 }
         }
+        .tint(OpsAITheme.cyan)
     }
 }
