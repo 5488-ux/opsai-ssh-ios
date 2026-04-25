@@ -26,6 +26,11 @@ struct ServerEditorView: View {
                     TextField("用户名", text: $server.username)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                    TextField("服务器大小，例如：2C4G / 4C8G", text: $server.serverSize)
+                    TextField("绑定域名，多个可用逗号或换行分隔", text: $server.boundDomains, axis: .vertical)
+                        .lineLimit(2...5)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                 }
 
                 Section("认证方式") {

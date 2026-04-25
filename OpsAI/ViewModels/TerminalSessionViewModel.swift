@@ -106,6 +106,25 @@ final class TerminalSessionViewModel: ObservableObject {
         )
     }
 
+    func analyzeExecutionOutput(_ output: String, sourceLabel: String) async {
+        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            errorMessage = "当前还没有可供分析的执行结果。"
+            return
+        }
+
+        await submitAIOpsPrompt(
+            """
+            请根据下面这段命令执行结果继续分析，先解释结果，再给出下一步值得人工批准的排查命令。
+
+            来源：\(sourceLabel)
+
+            \(trimmed)
+            """,
+            visibleUserText: "请分析 \(sourceLabel) 的执行结果。"
+        )
+    }
+
     func runDiagnosticTool(_ tool: AIDiagnosticTool, analyzeAfterRun: Bool) async {
         guard isConnected else {
             errorMessage = "请先连接服务器。"

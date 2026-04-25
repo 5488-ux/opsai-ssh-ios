@@ -5,6 +5,7 @@ struct CommandDraftView: View {
     let isDrafting: Bool
     let onChange: (String) -> Void
     let onApprove: () -> Void
+    let onAnalyzeOutput: (String) -> Void
 
     @State private var editableCommand: String
 
@@ -12,12 +13,14 @@ struct CommandDraftView: View {
         draft: AIPlan.CommandDraft,
         isDrafting: Bool,
         onChange: @escaping (String) -> Void,
-        onApprove: @escaping () -> Void
+        onApprove: @escaping () -> Void,
+        onAnalyzeOutput: @escaping (String) -> Void
     ) {
         self.draft = draft
         self.isDrafting = isDrafting
         self.onChange = onChange
         self.onApprove = onApprove
+        self.onAnalyzeOutput = onAnalyzeOutput
         _editableCommand = State(initialValue: draft.command)
     }
 
@@ -72,12 +75,28 @@ struct CommandDraftView: View {
             .disabled(draft.approvedAt != nil || isDrafting)
 
             if let output = draft.output {
-                Text(output)
-                    .font(.system(.footnote, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("执行结果")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Button("AI 分析") {
+                            onAnalyzeOutput(output)
+                        }
+                        .buttonStyle(.bordered)
+                        .font(.footnote)
+                    }
+
+                    Text(output)
+                        .font(.system(.footnote, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(12)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
         .padding(16)

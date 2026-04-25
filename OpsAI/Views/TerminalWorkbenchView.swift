@@ -304,6 +304,14 @@ struct TerminalWorkbenchView: View {
                     },
                     onApprove: {
                         Task { await viewModel.approveAndRun(draft.id) }
+                    },
+                    onAnalyzeOutput: { output in
+                        Task {
+                            await viewModel.analyzeExecutionOutput(
+                                output,
+                                sourceLabel: "命令 \(draft.command)"
+                            )
+                        }
                     }
                 )
             }
