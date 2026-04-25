@@ -38,6 +38,9 @@ struct ServerEditorView: View {
                     if server.authenticationMethod == .password {
                         SecureField("Password", text: $password)
                     } else {
+                        Text("Private key support is the next step. The real SSH connection in this build uses password login.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                         TextField("Private key", text: $privateKey, axis: .vertical)
                             .lineLimit(5...10)
                             .textInputAutocapitalization(.never)

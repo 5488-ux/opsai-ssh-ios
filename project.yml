@@ -7,13 +7,19 @@ settings:
   base:
     SWIFT_VERSION: 5.10
     PRODUCT_BUNDLE_IDENTIFIER: com.opsai.app
-packages: {}
+packages:
+  SSHClient:
+    url: https://github.com/gaetanzanella/swift-ssh-client
+    from: 0.1.4
 targets:
   OpsAI:
     type: application
     platform: iOS
     sources:
       - path: OpsAI
+    dependencies:
+      - package: SSHClient
+        product: SSHClient
     settings:
       base:
         INFOPLIST_KEY_CFBundleDisplayName: OpsAI

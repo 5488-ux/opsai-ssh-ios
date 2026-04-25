@@ -13,12 +13,13 @@ OpsAI is an iPhone app for direct SSH operations with a user-configured AI assis
 
 ## Current scope
 
-This repository contains the initial SwiftUI app scaffold, local persistence, AI planning flow, and approval-first terminal workbench.
+This repository contains the initial SwiftUI app scaffold, local persistence, AI planning flow, approval-first terminal workbench, and a real password-based SSH connection layer for iOS.
 
 ## Tech stack
 
 - SwiftUI
 - XcodeGen
+- `gaetanzanella/swift-ssh-client` on top of Apple `swift-nio-ssh`
 - UserDefaults for non-secret local state
 - Keychain wrapper for secrets
 - GitHub Actions for macOS builds
@@ -41,6 +42,6 @@ Signed IPA packaging is prepared in `.github/workflows/ios-build.yml`. Add these
 
 ## Next build milestone
 
-- Replace the mock SSH adapter with a production iOS SSH client implementation
+- Add private-key authentication
 - Add streaming AI responses for live token-by-token command drafting
 - Add host key verification and biometric unlock gates for secrets

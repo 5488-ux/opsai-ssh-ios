@@ -20,7 +20,7 @@ final class TerminalSessionViewModel: ObservableObject {
     init(
         server: SSHServer,
         appStore: AppStore,
-        sshService: SSHServiceProtocol = MockSSHService(),
+        sshService: SSHServiceProtocol = RealSSHService(),
         aiService: AIServiceProtocol = AIService()
     ) {
         self.server = server
