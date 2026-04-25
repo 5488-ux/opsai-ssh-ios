@@ -15,6 +15,10 @@ struct TerminalWorkbenchView: View {
                 manualCommandCard
                 aiChatCard
 
+                if let snapshot = viewModel.serverConfigSnapshot {
+                    serverConfigCard(snapshot)
+                }
+
                 if let plan = viewModel.aiPlan {
                     aiPlanCard(plan)
                 }
@@ -50,6 +54,16 @@ struct TerminalWorkbenchView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
+            if !viewModel.boundDomains.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("绑定域名", systemImage: "globe")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    domainTagWrap(domains: viewModel.boundDomains)
+                }
+            }
+
             HStack {
                 Button("重新连接") {
                     Task { await viewModel.connect() }
@@ -59,6 +73,18 @@ struct TerminalWorkbenchView: View {
 
                 Button("断开连接") {
                     Task { await viewModel.disconnect() }
+                }
+                .buttonStyle(.bordered)
+                .disabled(!viewModel.isConnected || viewModel.isBusy)
+
+                Button("扫描绑定域名") {
+                    Task { await viewModel.scanBoundDomains() }
+                }
+                .buttonStyle(.bordered)
+                .disabled(!viewModel.isConnected || viewModel.isBusy)
+
+                Button("扫描服务器配置") {
+                    Task { await viewModel.scanServerConfiguration() }
                 }
                 .buttonStyle(.bordered)
                 .disabled(!viewModel.isConnected || viewModel.isBusy)
@@ -320,5 +346,118 @@ struct TerminalWorkbenchView: View {
         .padding(16)
         .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
+    private func serverConfigCard(_ snapshot: ServerConfigSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("服务器配置概览")
+                    .font(.headline)
+
+                Spacer()
+
+                Button("AI 分析") {
+                    Task { await viewModel.analyzeServerConfiguration() }
+                }
+                .buttonStyle(.borderedProminent)
+                .font(.footnote)
+                .disabled(viewModel.isBusy)
+            }
+
+            Text("扫描时间：\(snapshot.scannedAt.formatted(date: .abbreviated, time: .shortened))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            configRow(title: "主机", value: snapshot.hostName)
+            configRow(title: "系统", value: snapshot.operatingSystem)
+            configRow(title: "运行时间", value: snapshot.uptimeSummary)
+            configRow(title: "内存", value: snapshot.memorySummary)
+            configRow(title: "根分区", value: snapshot.rootDiskSummary)
+
+            if !snapshot.listeningPorts.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("监听端口")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    domainTagWrap(domains: snapshot.listeningPorts)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("服务状态")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                ForEach(snapshot.services) { service in
+                    HStack(alignment: .top) {
+                        Text(service.name)
+                            .font(.subheadline.weight(.semibold))
+                            .frame(width: 72, alignment: .leading)
+
+                        Text(service.state.displayName)
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(statusColor(for: service.state).opacity(0.14))
+                            .foregroundStyle(statusColor(for: service.state))
+                            .clipShape(Capsule())
+
+                        Text(service.detail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
+    private func configRow(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.subheadline)
+        }
+    }
+
+    @ViewBuilder
+    private func domainTagWrap(domains: [String]) -> some View {
+        let visibleDomains = Array(domains.prefix(4))
+
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                ForEach(visibleDomains, id: \.self) { domain in
+                    Text(domain)
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(Capsule())
+                }
+            }
+
+            if domains.count > 4 {
+                Text("还有 \(domains.count - 4) 个域名")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func statusColor(for state: ServerConfigSnapshot.ServiceStatus.State) -> Color {
+        switch state {
+        case .running:
+            return .green
+        case .stopped:
+            return .red
+        case .unknown:
+            return .orange
+        }
     }
 }

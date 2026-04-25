@@ -7,8 +7,8 @@ settings:
   base:
     SWIFT_VERSION: 5.10
     PRODUCT_BUNDLE_IDENTIFIER: app.mango7143.test8374
-    MARKETING_VERSION: 1.0
-    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 1.2
+    CURRENT_PROJECT_VERSION: 2
 packages:
   SSHClient:
     url: https://github.com/gaetanzanella/swift-ssh-client

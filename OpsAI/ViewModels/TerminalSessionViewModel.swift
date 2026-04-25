@@ -11,6 +11,8 @@ final class TerminalSessionViewModel: ObservableObject {
     @Published var selectedAssistant = AIAssistantProfile.operations
     @Published var aiPlan: AIPlan?
     @Published var draftingCommandIDs: Set<UUID> = []
+    @Published var boundDomains: [String]
+    @Published var serverConfigSnapshot: ServerConfigSnapshot?
     @Published var errorMessage: String?
     @Published var conversation: [AIOpsChatMessage]
 
@@ -40,6 +42,8 @@ final class TerminalSessionViewModel: ObservableObject {
         self.appStore = appStore
         self.sshService = sshService
         self.aiService = aiService
+        self.boundDomains = server.boundDomainList
+        self.serverConfigSnapshot = nil
         let defaultConversation = Self.makeDefaultConversation(for: .operations)
         self.conversation = defaultConversation
         self.conversationsByAssistant = [.operations: defaultConversation]
@@ -122,6 +126,85 @@ final class TerminalSessionViewModel: ObservableObject {
             \(trimmed)
             """,
             visibleUserText: "请分析 \(sourceLabel) 的执行结果。"
+        )
+    }
+
+    func scanBoundDomains() async {
+        guard isConnected else {
+            setError("请先连接服务器。")
+            return
+        }
+
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+
+        do {
+            let output = try await sshService.execute(domainScanCommand)
+            appendOutput("## 域名扫描\n\(output)")
+
+            let domains = parseBoundDomains(from: output)
+            guard !domains.isEmpty else {
+                setError("未在常见站点配置里扫描到绑定域名。")
+                return
+            }
+
+            boundDomains = domains
+            appStore.updateBoundDomains(for: server.id, domains: domains)
+        } catch {
+            setError(error.localizedDescription)
+        }
+    }
+
+    func scanServerConfiguration() async {
+        guard isConnected else {
+            setError("请先连接服务器。")
+            return
+        }
+
+        isBusy = true
+        errorMessage = nil
+        defer { isBusy = false }
+
+        do {
+            let output = try await sshService.execute(serverConfigScanCommand)
+            appendOutput("## 配置扫描\n\(output)")
+
+            let sections = parseMarkedSections(from: output)
+            let snapshot = ServerConfigSnapshot(
+                hostName: value(for: "HOST", in: sections, fallback: server.host),
+                operatingSystem: value(for: "OS", in: sections, fallback: "未知系统"),
+                uptimeSummary: value(for: "UPTIME", in: sections, fallback: "未知"),
+                memorySummary: value(for: "MEMORY", in: sections, fallback: "未知"),
+                rootDiskSummary: value(for: "DISK", in: sections, fallback: "未知"),
+                listeningPorts: parseListeningPorts(from: sections["PORTS"]),
+                services: [
+                    makeServiceStatus(name: "Nginx", key: "NGINX", sections: sections),
+                    makeServiceStatus(name: "MySQL", key: "MYSQL", sections: sections),
+                    makeServiceStatus(name: "Redis", key: "REDIS", sections: sections),
+                    makeServiceStatus(name: "Docker", key: "DOCKER", sections: sections)
+                ]
+            )
+
+            serverConfigSnapshot = snapshot
+        } catch {
+            setError(error.localizedDescription)
+        }
+    }
+
+    func analyzeServerConfiguration() async {
+        guard let snapshot = serverConfigSnapshot else {
+            setError("请先扫描服务器配置。")
+            return
+        }
+
+        await submitAIOpsPrompt(
+            """
+            请根据下面这份服务器配置概览做分析，先总结当前机器状态，再给出下一步值得人工批准的排查命令。
+
+            \(snapshot.summaryText)
+            """,
+            visibleUserText: "请分析这台服务器的配置概览。"
         )
     }
 
@@ -323,6 +406,113 @@ final class TerminalSessionViewModel: ObservableObject {
 
     private static func makeDefaultConversation(for assistant: AIAssistantProfile) -> [AIOpsChatMessage] {
         [.init(role: .assistant, text: assistant.introMessage)]
+    }
+
+    private var serverConfigScanCommand: String {
+        #"""
+        sh -lc 'echo "__OPS_HOST__"; hostname 2>/dev/null;
+        echo "__OPS_OS__"; uname -srmo 2>/dev/null;
+        echo "__OPS_UPTIME__"; uptime 2>/dev/null;
+        echo "__OPS_MEMORY__"; free -h 2>/dev/null | sed -n "2p";
+        echo "__OPS_DISK__"; df -h / 2>/dev/null | tail -n 1;
+        echo "__OPS_PORTS__"; ss -lnt 2>/dev/null | awk "NR>1 {print \$4}" | sed "s/.*://" | sort -u | tr "\n" " "; echo;
+        echo "__OPS_NGINX__"; (systemctl is-active nginx 2>/dev/null || service nginx status 2>/dev/null | head -n 1 || ps aux | grep "[n]ginx" | head -n 1 || echo "unknown");
+        echo "__OPS_MYSQL__"; (systemctl is-active mysqld 2>/dev/null || systemctl is-active mysql 2>/dev/null || service mysqld status 2>/dev/null | head -n 1 || service mysql status 2>/dev/null | head -n 1 || ps aux | grep "[m]ysql" | head -n 1 || echo "unknown");
+        echo "__OPS_REDIS__"; (systemctl is-active redis 2>/dev/null || systemctl is-active redis-server 2>/dev/null || service redis status 2>/dev/null | head -n 1 || service redis-server status 2>/dev/null | head -n 1 || ps aux | grep "[r]edis" | head -n 1 || echo "unknown");
+        echo "__OPS_DOCKER__"; (systemctl is-active docker 2>/dev/null || service docker status 2>/dev/null | head -n 1 || docker info --format "{{.ServerVersion}}" 2>/dev/null || echo "unknown")'
+        """#
+    }
+
+    private var domainScanCommand: String {
+        #"""
+        sh -lc 'for dir in /www/server/panel/vhost/nginx /www/server/panel/vhost/apache /etc/nginx/sites-enabled /etc/nginx/conf.d /usr/local/nginx/conf/vhost /etc/httpd/conf.d /etc/apache2/sites-enabled; do
+          if [ -d "$dir" ]; then
+            grep -RhoE "server_name[[:space:]]+[^;]+" "$dir" 2>/dev/null | sed -E "s/.*server_name[[:space:]]+//" | tr " " "\n"
+            grep -RhoE "ServerName[[:space:]]+[^[:space:]]+" "$dir" 2>/dev/null | awk "{print \$2}"
+            grep -RhoE "ServerAlias[[:space:]]+[^[:space:]].*" "$dir" 2>/dev/null | cut -d" " -f2- | tr " " "\n"
+          fi
+        done | sed "s/[;[:space:]]*$//" | grep -vE "^(default_server|_|\\*|localhost)$" | grep -E "^[A-Za-z0-9.-]+$" | sort -u | head -n 50'
+        """#
+    }
+
+    private func parseBoundDomains(from output: String) -> [String] {
+        output
+            .components(separatedBy: .newlines)
+            .filter { !$0.hasPrefix("$ ") }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { line in
+                !line.isEmpty &&
+                line != "(退出码 0)" &&
+                !line.contains("server_name[") &&
+                !line.contains("ServerName[") &&
+                !line.contains("ServerAlias[")
+            }
+            .filter { line in
+                line.range(of: #"^[A-Za-z0-9.-]+$"#, options: .regularExpression) != nil
+            }
+    }
+
+    private func parseMarkedSections(from output: String) -> [String: String] {
+        var sections: [String: [String]] = [:]
+        var currentKey: String?
+
+        for rawLine in output.components(separatedBy: .newlines) {
+            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !line.isEmpty, !line.hasPrefix("$ ") else { continue }
+
+            if line.hasPrefix("__OPS_"), line.hasSuffix("__") {
+                currentKey = String(line.dropFirst("__OPS_".count).dropLast(2))
+                if let currentKey {
+                    sections[currentKey, default: []] = []
+                }
+                continue
+            }
+
+            guard let currentKey else { continue }
+            sections[currentKey, default: []].append(line)
+        }
+
+        return sections.mapValues { $0.joined(separator: " ") }
+    }
+
+    private func value(for key: String, in sections: [String: String], fallback: String) -> String {
+        let trimmed = sections[key]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? fallback : trimmed
+    }
+
+    private func parseListeningPorts(from rawValue: String?) -> [String] {
+        let ports = (rawValue ?? "")
+            .split(separator: " ")
+            .map(String.init)
+            .filter { !$0.isEmpty }
+
+        let preferredOrder = ["22", "80", "443", "3306", "6379", "8080"]
+        let uniquePorts = Array(Set(ports))
+
+        return uniquePorts.sorted { left, right in
+            let leftIndex = preferredOrder.firstIndex(of: left) ?? Int.max
+            let rightIndex = preferredOrder.firstIndex(of: right) ?? Int.max
+            if leftIndex == rightIndex {
+                return left < right
+            }
+            return leftIndex < rightIndex
+        }
+    }
+
+    private func makeServiceStatus(name: String, key: String, sections: [String: String]) -> ServerConfigSnapshot.ServiceStatus {
+        let detail = value(for: key, in: sections, fallback: "unknown")
+        let normalized = detail.lowercased()
+
+        let state: ServerConfigSnapshot.ServiceStatus.State
+        if normalized == "active" || normalized.contains("running") || normalized.range(of: #"^\d+(\.\d+)*$"#, options: .regularExpression) != nil {
+            state = .running
+        } else if normalized == "inactive" || normalized == "failed" || normalized.contains("stopped") || normalized.contains("not running") {
+            state = .stopped
+        } else {
+            state = .unknown
+        }
+
+        return .init(id: key, name: name, state: state, detail: detail)
     }
 
     private func setError(_ message: String) {

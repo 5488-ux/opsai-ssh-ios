@@ -106,6 +106,16 @@ final class AppStore: ObservableObject {
         storage.saveIssueEntries(issueEntries)
     }
 
+    func updateBoundDomains(for serverID: UUID, domains: [String]) {
+        guard let index = servers.firstIndex(where: { $0.id == serverID }) else { return }
+        let normalizedDomains = domains
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        servers[index].boundDomains = normalizedDomains.joined(separator: ", ")
+        storage.saveServers(servers)
+    }
+
     private func bootstrapLocalAIConfigIfNeeded() {
         guard let localConfig = LocalAIConfigLoader.load() else {
             return
