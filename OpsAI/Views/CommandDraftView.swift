@@ -60,6 +60,9 @@ struct CommandDraftView: View {
                     .onChange(of: editableCommand) { _, newValue in
                         onChange(newValue)
                     }
+                    .onChange(of: draft.command) { _, newValue in
+                        editableCommand = newValue
+                    }
             }
 
             Button(draft.approvedAt == nil ? "批准并执行" : "已执行") {

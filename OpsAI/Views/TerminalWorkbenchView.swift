@@ -72,8 +72,19 @@ struct TerminalWorkbenchView: View {
 
     private var terminalCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("终端输出")
-                .font(.headline)
+            HStack {
+                Text("终端输出")
+                    .font(.headline)
+
+                Spacer()
+
+                Button("交给 AI 分析") {
+                    Task { await viewModel.analyzeTerminalOutput() }
+                }
+                .buttonStyle(.bordered)
+                .font(.footnote)
+                .disabled(viewModel.isBusy)
+            }
 
             Text(viewModel.terminalOutput)
                 .font(.system(.footnote, design: .monospaced))
@@ -122,14 +133,16 @@ struct TerminalWorkbenchView: View {
             Text("AI 运维")
                 .font(.headline)
 
-            Text("像面板助手一样直接对话。AI 会先回答，再给出可批准执行的命令计划。")
+            Text("像宝塔面板的 AI 助手一样直接对话。先选助手，再提问；如果需要执行命令，仍然要你逐条批准。")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
+            assistantPickerRow
             quickPromptRow
+            diagnosticToolSection
             conversationList
 
-            TextField("例如：排查 nginx 为什么返回 502", text: $viewModel.aiPrompt, axis: .vertical)
+            TextField(viewModel.selectedAssistant.promptPlaceholder, text: $viewModel.aiPrompt, axis: .vertical)
                 .lineLimit(2...5)
                 .padding(12)
                 .background(Color(.secondarySystemBackground))
@@ -147,6 +160,37 @@ struct TerminalWorkbenchView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
+    private var assistantPickerRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(AIAssistantProfile.allCases) { assistant in
+                    Button {
+                        viewModel.selectAssistant(assistant)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(assistant.displayName)
+                                .font(.subheadline.weight(.semibold))
+                            Text(assistant.shortDescription)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        .frame(width: 140, alignment: .leading)
+                        .padding(12)
+                        .background(
+                            viewModel.selectedAssistant == assistant
+                                ? Color.accentColor.opacity(0.16)
+                                : Color(.secondarySystemBackground)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.isBusy)
+                }
+            }
+        }
+    }
+
     private var quickPromptRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -158,6 +202,54 @@ struct TerminalWorkbenchView: View {
                     .font(.footnote)
                     .disabled(viewModel.isBusy)
                 }
+            }
+        }
+    }
+
+    private var diagnosticToolSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("技能工具")
+                    .font(.subheadline.weight(.semibold))
+
+                Spacer()
+
+                Text("只读")
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.green.opacity(0.14))
+                    .foregroundStyle(.green)
+                    .clipShape(Capsule())
+            }
+
+            ForEach(viewModel.diagnosticTools, id: \.id) { tool in
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(tool.displayName)
+                        .font(.subheadline.weight(.semibold))
+
+                    Text(tool.shortDescription)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    HStack {
+                        Button("运行工具") {
+                            Task { await viewModel.runDiagnosticTool(tool, analyzeAfterRun: false) }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(viewModel.isBusy)
+
+                        Button("运行并分析") {
+                            Task { await viewModel.runDiagnosticTool(tool, analyzeAfterRun: true) }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(viewModel.isBusy)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
     }
@@ -180,7 +272,7 @@ struct TerminalWorkbenchView: View {
 
     private func messageBubble(_ message: AIOpsChatMessage, color: Color, textColor: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(message.role == .assistant ? "AI 助手" : "你")
+            Text(message.role == .assistant ? viewModel.selectedAssistant.displayName : "你")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

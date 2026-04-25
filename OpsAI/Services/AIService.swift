@@ -2,7 +2,7 @@ import Foundation
 
 struct AIOpsAssistantResponse: Equatable {
     let reply: String
-    let plan: AIPlan
+    let plan: AIPlan?
 }
 
 protocol AIServiceProtocol {
@@ -10,6 +10,7 @@ protocol AIServiceProtocol {
         prompt: String,
         history: [AIOpsChatMessage],
         server: SSHServer,
+        assistantProfile: AIAssistantProfile,
         config: AIProviderConfig,
         apiKey: String?
     ) async throws -> AIOpsAssistantResponse
@@ -45,6 +46,7 @@ final class AIService: AIServiceProtocol {
         prompt: String,
         history: [AIOpsChatMessage],
         server: SSHServer,
+        assistantProfile: AIAssistantProfile,
         config: AIProviderConfig,
         apiKey: String?
     ) async throws -> AIOpsAssistantResponse {
@@ -77,14 +79,15 @@ final class AIService: AIServiceProtocol {
                 .init(
                     role: "system",
                     content: [
+                        assistantProfile.systemPrompt,
                         config.systemPrompt,
-                        "你是运维对话助手。",
+                        "你是对话式运维助手。",
                         "你必须只返回 JSON 对象。",
                         "返回格式必须是：",
                         "{\"reply\":\"字符串\",\"summary\":\"字符串\",\"commands\":[{\"command\":\"字符串\",\"reason\":\"字符串\",\"riskLevel\":\"low|medium|high\"}]}",
                         "reply 是给用户的自然语言回答，要求简洁明确。",
-                        "summary 是命令计划摘要。",
-                        "commands 数量限制为 1 到 4 条。",
+                        "summary 是命令计划摘要，如果暂时不需要命令也要简短说明。",
+                        "commands 数量限制为 0 到 4 条。",
                         "优先生成只读命令。",
                         "不要返回 markdown 代码块。",
                         "riskLevel 只能是 low、medium、high。"
@@ -105,6 +108,7 @@ final class AIService: AIServiceProtocol {
         let data = try await sendRequest(
             url: endpoint,
             method: "POST",
+            providerName: config.providerName,
             apiKey: trimmedKey,
             body: requestBody
         )
@@ -118,18 +122,23 @@ final class AIService: AIServiceProtocol {
         let payloadData = Data(stripCodeFences(from: rawContent).utf8)
         let payload = try JSONDecoder().decode(DeepSeekAssistantPayload.self, from: payloadData)
 
-        let plan = AIPlan(
-            userGoal: prompt,
-            summary: payload.summary,
-            commands: payload.commands.prefix(4).map {
-                AIPlan.CommandDraft(
-                    command: $0.command,
-                    reason: $0.reason,
-                    riskLevel: $0.riskLevel,
-                    requiresApproval: config.requireApprovalPerCommand
-                )
-            }
-        )
+        let plan: AIPlan?
+        if payload.commands.isEmpty {
+            plan = nil
+        } else {
+            plan = AIPlan(
+                userGoal: prompt,
+                summary: payload.summary,
+                commands: payload.commands.prefix(4).map {
+                    AIPlan.CommandDraft(
+                        command: $0.command,
+                        reason: $0.reason,
+                        riskLevel: $0.riskLevel,
+                        requiresApproval: config.requireApprovalPerCommand
+                    )
+                }
+            )
+        }
 
         return AIOpsAssistantResponse(reply: payload.reply, plan: plan)
     }
@@ -150,6 +159,7 @@ final class AIService: AIServiceProtocol {
         let data = try await sendRequest(
             url: endpoint,
             method: "GET",
+            providerName: config.providerName,
             apiKey: trimmedKey,
             body: Optional<EmptyBody>.none
         )
@@ -172,6 +182,7 @@ final class AIService: AIServiceProtocol {
     private func sendRequest<Body: Encodable>(
         url: URL,
         method: String,
+        providerName: String,
         apiKey: String,
         body: Body?
     ) async throws -> Data {
@@ -186,11 +197,11 @@ final class AIService: AIServiceProtocol {
         }
 
         let (data, response) = try await URLSession.shared.data(for: request)
-        try validateHTTPResponse(data: data, response: response)
+        try validateHTTPResponse(data: data, response: response, providerName: providerName)
         return data
     }
 
-    private func validateHTTPResponse(data: Data, response: URLResponse) throws {
+    private func validateHTTPResponse(data: Data, response: URLResponse, providerName: String) throws {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw AIServiceError.requestFailed("AI 请求失败：未收到有效的 HTTP 响应。")
         }
@@ -199,9 +210,9 @@ final class AIService: AIServiceProtocol {
             if let apiError = try? JSONDecoder().decode(DeepSeekErrorResponse.self, from: data),
                let message = apiError.error?.message,
                !message.isEmpty {
-                throw AIServiceError.requestFailed("DeepSeek 请求失败：\(message)")
+                throw AIServiceError.requestFailed("\(providerName) 请求失败：\(message)")
             }
-            throw AIServiceError.requestFailed("DeepSeek 请求失败：HTTP \(httpResponse.statusCode)。")
+            throw AIServiceError.requestFailed("\(providerName) 请求失败：HTTP \(httpResponse.statusCode)。")
         }
     }
 
