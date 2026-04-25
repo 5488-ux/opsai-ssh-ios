@@ -4,68 +4,68 @@ struct AppSettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.5"
     }
 
     private var buildNumber: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "4"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "5"
     }
 
     var body: some View {
         NavigationStack {
             List {
-                Section("公告") {
-                    Label("OpsAI v1.4 新增设置中心，可查看公告、更新日志、版本和 GitHub 链接。", systemImage: "megaphone")
-                    Text("当前版本仍以本机直连 SSH 为核心，AI 只生成建议和命令草稿，不会自动执行命令。")
+                Section("Announcements") {
+                    Label("OpsAI v1.5 updates the Settings center to English and keeps iOS 26 SDK CI compatibility.", systemImage: "megaphone")
+                    Text("OpsAI still connects directly to your servers. AI drafts suggestions and command plans, but it never runs commands automatically.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
-                Section("更新日志") {
+                Section("Release Notes") {
+                    updateRow(version: "v1.5", items: [
+                        "Converted the Settings center content to English",
+                        "Kept the app version and build information visible",
+                        "Prepared CI for iOS 26 SDK builds"
+                    ])
+
                     updateRow(version: "v1.4", items: [
-                        "新增右上角设置入口",
-                        "新增公告、更新日志和版本信息",
-                        "新增 GitHub 仓库链接和应用介绍"
+                        "Added the top-right Settings entry",
+                        "Added announcements, release notes, and version details",
+                        "Added the GitHub repository link and app introduction"
                     ])
 
                     updateRow(version: "v1.3", items: [
-                        "新增 App 图标",
-                        "恢复浅色系统界面",
-                        "简化工作台信息层级"
-                    ])
-
-                    updateRow(version: "v1.2", items: [
-                        "新增服务器配置扫描",
-                        "新增绑定域名扫描",
-                        "改进命令执行结果分析"
+                        "Added the App Icon",
+                        "Restored the light system interface",
+                        "Simplified the workbench information hierarchy"
                     ])
                 }
 
-                Section("版本") {
-                    LabeledContent("当前版本", value: appVersion)
+                Section("Version") {
+                    LabeledContent("Current Version", value: appVersion)
                     LabeledContent("Build", value: buildNumber)
                 }
 
-                Section("链接") {
+                Section("Links") {
                     Link(destination: URL(string: "https://github.com/5488-ux/opsai-ssh-ios")!) {
-                        Label("GitHub 仓库", systemImage: "link")
+                        Label("GitHub Repository", systemImage: "link")
                     }
                 }
 
-                Section("介绍") {
-                    Text("OpsAI 是一个 iPhone SSH 运维工具。你可以保存服务器、直接连接终端、让 AI 生成排查计划，并在人工批准后逐条执行命令。")
+                Section("About") {
+                    Text("OpsAI is an iPhone SSH operations app. You can save servers, connect directly to terminals, ask AI to draft troubleshooting plans, and manually approve each command before execution.")
                         .font(.body)
 
-                    Label("无后端，服务器凭证只保存在本机钥匙串。", systemImage: "lock.shield")
-                    Label("AI Provider 可配置，兼容 OpenAI 风格接口。", systemImage: "sparkles")
-                    Label("所有 AI 命令草稿都需要人工确认。", systemImage: "checkmark.shield")
+                    Label("No backend. Server credentials stay in the local keychain.", systemImage: "lock.shield")
+                    Label("Configurable AI provider with OpenAI-compatible APIs.", systemImage: "sparkles")
+                    Label("Every AI command draft requires manual approval.", systemImage: "checkmark.shield")
                 }
             }
-            .navigationTitle("设置")
+            .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") {
+                    Button("Done") {
                         dismiss()
                     }
                 }
