@@ -6,6 +6,7 @@ final class AppStore: ObservableObject {
     @Published var servers: [SSHServer]
     @Published var providerConfig: AIProviderConfig
     @Published var issueEntries: [AppIssueEntry]
+    @Published var language: AppLanguage
 
     private let storage: AppStorageService
     private let keychain: KeychainStore
@@ -19,6 +20,7 @@ final class AppStore: ObservableObject {
         self.servers = storage.loadServers()
         self.providerConfig = storage.loadProviderConfig()
         self.issueEntries = storage.loadIssueEntries()
+        self.language = storage.loadLanguage()
 
         if providerConfig.apiKeyReference == nil {
             providerConfig.apiKeyReference = AIProviderConfig.defaultAPIKeyReference
@@ -104,6 +106,11 @@ final class AppStore: ObservableObject {
     func clearIssueEntries() {
         issueEntries = []
         storage.saveIssueEntries(issueEntries)
+    }
+
+    func updateLanguage(_ language: AppLanguage) {
+        self.language = language
+        storage.saveLanguage(language)
     }
 
     func updateBoundDomains(for serverID: UUID, domains: [String]) {

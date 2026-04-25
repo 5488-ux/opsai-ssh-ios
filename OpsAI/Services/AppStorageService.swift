@@ -5,6 +5,7 @@ final class AppStorageService {
         static let servers = "opsai.savedServers"
         static let provider = "opsai.providerConfig"
         static let issues = "opsai.issueEntries"
+        static let language = "opsai.appLanguage"
     }
 
     private let defaults: UserDefaults
@@ -53,5 +54,17 @@ final class AppStorageService {
     func saveIssueEntries(_ issues: [AppIssueEntry]) {
         guard let data = try? encoder.encode(issues) else { return }
         defaults.set(data, forKey: Keys.issues)
+    }
+
+    func loadLanguage() -> AppLanguage {
+        guard let rawValue = defaults.string(forKey: Keys.language),
+              let language = AppLanguage(rawValue: rawValue) else {
+            return .english
+        }
+        return language
+    }
+
+    func saveLanguage(_ language: AppLanguage) {
+        defaults.set(language.rawValue, forKey: Keys.language)
     }
 }

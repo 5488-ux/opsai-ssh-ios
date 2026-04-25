@@ -36,7 +36,7 @@ struct ServerEditorView: View {
                 Section("认证方式") {
                     Picker("方式", selection: $server.authenticationMethod) {
                         ForEach(SSHServer.AuthenticationMethod.allCases) { method in
-                            Text(method.displayName).tag(method)
+                            Text(LocalizedStringKey(method.displayName)).tag(method)
                         }
                     }
 

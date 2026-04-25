@@ -27,7 +27,7 @@ struct CommandDraftView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label(draft.riskLevel.displayName, systemImage: riskIcon)
+                Label(LocalizedStringKey(draft.riskLevel.displayName), systemImage: riskIcon)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(riskColor)
 

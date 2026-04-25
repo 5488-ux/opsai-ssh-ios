@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AppSettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var appStore: AppStore
 
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.5"
@@ -14,6 +15,17 @@ struct AppSettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("Language") {
+                    Picker("App Language", selection: Binding(
+                        get: { appStore.language },
+                        set: { appStore.updateLanguage($0) }
+                    )) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(language.displayName).tag(language)
+                        }
+                    }
+                }
+
                 Section("Announcements") {
                     Label("OpsAI v1.5 updates the Settings center to English and keeps iOS 26 SDK CI compatibility.", systemImage: "megaphone")
                     Text("OpsAI still connects directly to your servers. AI drafts suggestions and command plans, but it never runs commands automatically.")

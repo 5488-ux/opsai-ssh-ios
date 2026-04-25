@@ -8,6 +8,7 @@ struct OpsAIApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(appStore)
+                .environment(\.locale, Locale(identifier: appStore.language.localeIdentifier))
         }
     }
 }

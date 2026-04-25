@@ -164,7 +164,7 @@ struct TerminalWorkbenchView: View {
             conversationList
             diagnosticToolSection
 
-            TextField(viewModel.selectedAssistant.promptPlaceholder, text: $viewModel.aiPrompt, axis: .vertical)
+            TextField(LocalizedStringKey(viewModel.selectedAssistant.promptPlaceholder), text: $viewModel.aiPrompt, axis: .vertical)
                 .lineLimit(2...5)
                 .padding(12)
                 .background(Color(.secondarySystemBackground))
@@ -189,7 +189,7 @@ struct TerminalWorkbenchView: View {
                     Button {
                         viewModel.selectAssistant(assistant)
                     } label: {
-                        Text(assistant.displayName)
+                        Text(LocalizedStringKey(assistant.displayName))
                             .font(.subheadline.weight(.semibold))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 9)
@@ -211,7 +211,7 @@ struct TerminalWorkbenchView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(viewModel.quickPrompts, id: \.self) { prompt in
-                    Button(prompt) {
+                    Button(LocalizedStringKey(prompt)) {
                         Task { await viewModel.useQuickPrompt(prompt) }
                     }
                     .buttonStyle(.bordered)
@@ -227,10 +227,10 @@ struct TerminalWorkbenchView: View {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(viewModel.diagnosticTools, id: \.id) { tool in
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(tool.displayName)
+                        Text(LocalizedStringKey(tool.displayName))
                             .font(.subheadline.weight(.semibold))
 
-                        Text(tool.shortDescription)
+                        Text(LocalizedStringKey(tool.shortDescription))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
 
@@ -283,7 +283,7 @@ struct TerminalWorkbenchView: View {
 
     private func messageBubble(_ message: AIOpsChatMessage, color: Color, textColor: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(message.role == .assistant ? viewModel.selectedAssistant.displayName : "你")
+            Text(LocalizedStringKey(message.role == .assistant ? viewModel.selectedAssistant.displayName : "你"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -320,7 +320,7 @@ struct TerminalWorkbenchView: View {
                         Task {
                             await viewModel.analyzeExecutionOutput(
                                 output,
-                                sourceLabel: "命令 \(draft.command)"
+                                sourceLabel: String(localized: "命令") + " \(draft.command)"
                             )
                         }
                     }
@@ -379,7 +379,7 @@ struct TerminalWorkbenchView: View {
                             .font(.subheadline.weight(.semibold))
                             .frame(width: 72, alignment: .leading)
 
-                        Text(service.state.displayName)
+                        Text(LocalizedStringKey(service.state.displayName))
                             .font(.caption.weight(.semibold))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
