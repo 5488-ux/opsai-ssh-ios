@@ -13,9 +13,9 @@ struct ServerListView: View {
             List {
                 if appStore.servers.isEmpty {
                     ContentUnavailableView(
-                        "No Servers Yet",
+                        "还没有服务器",
                         systemImage: "server.rack",
-                        description: Text("Add an SSH target and keep credentials locally on the device.")
+                        description: Text("添加一个 SSH 目标后，凭证会仅保存在本机设备中。")
                     )
                 } else {
                     ForEach(appStore.servers) { server in
@@ -41,14 +41,14 @@ struct ServerListView: View {
                             Button(role: .destructive) {
                                 appStore.deleteServer(server)
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                Label("删除", systemImage: "trash")
                             }
 
                             Button {
                                 editorServer = server
                                 isPresentingEditor = true
                             } label: {
-                                Label("Edit", systemImage: "square.and.pencil")
+                                Label("编辑", systemImage: "square.and.pencil")
                             }
                             .tint(.blue)
                         }

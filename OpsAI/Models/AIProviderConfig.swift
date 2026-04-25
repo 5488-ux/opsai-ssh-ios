@@ -9,15 +9,15 @@ struct AIProviderConfig: Codable, Equatable {
     var requireApprovalPerCommand: Bool
 
     static let `default` = AIProviderConfig(
-        providerName: "OpenAI-Compatible",
+        providerName: "OpenAI 兼容接口",
         baseURL: "https://api.openai.com/v1",
         model: "gpt-5.4",
         apiKeyReference: nil,
         systemPrompt: """
-        You are an infrastructure assistant inside an iPhone SSH tool.
-        Produce a short investigation summary and then propose shell commands.
-        Never assume permission to execute commands.
-        Prefer safe read-only commands first.
+        你是 iPhone SSH 工具里的运维助手。
+        先给出简短排查摘要，再提出 shell 命令建议。
+        不要假设自己有执行权限。
+        优先给出安全的只读命令。
         """,
         requireApprovalPerCommand: true
     )

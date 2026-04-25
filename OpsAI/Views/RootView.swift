@@ -5,12 +5,12 @@ struct RootView: View {
         TabView {
             ServerListView()
                 .tabItem {
-                    Label("Servers", systemImage: "server.rack")
+                    Label("服务器", systemImage: "server.rack")
                 }
 
             AISettingsView()
                 .tabItem {
-                    Label("AI", systemImage: "sparkles.rectangle.stack")
+                    Label("AI 设置", systemImage: "sparkles.rectangle.stack")
                 }
         }
     }

@@ -19,19 +19,25 @@ enum SSHServiceError: LocalizedError {
     case unsupportedAuthenticationMethod
     case remoteError(String)
     case invalidPort
+    case invalidHost
+    case invalidUsername
 
     var errorDescription: String? {
         switch self {
         case .missingCredential:
-            return "Missing SSH credential."
+            return "缺少 SSH 凭证。"
         case .notConnected:
-            return "SSH session is not connected."
+            return "SSH 会话尚未连接。"
         case .unsupportedAuthenticationMethod:
-            return "Private key login is not wired yet. Use password authentication for the first real SSH build."
+            return "当前版本暂不支持私钥登录，请改用密码登录。"
         case .remoteError(let message):
             return message
         case .invalidPort:
-            return "SSH port is invalid."
+            return "SSH 端口无效。"
+        case .invalidHost:
+            return "主机地址不能为空。"
+        case .invalidUsername:
+            return "用户名不能为空。"
         }
     }
 }
@@ -44,6 +50,17 @@ final class RealSSHService: SSHServiceProtocol {
             await disconnect()
         }
 
+        let host = request.server.host.trimmingCharacters(in: .whitespacesAndNewlines)
+        let username = request.server.username.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !host.isEmpty else {
+            throw SSHServiceError.invalidHost
+        }
+
+        guard !username.isEmpty else {
+            throw SSHServiceError.invalidUsername
+        }
+
         switch request.server.authenticationMethod {
         case .password:
             guard let password = request.password, !password.isEmpty else {
@@ -53,14 +70,18 @@ final class RealSSHService: SSHServiceProtocol {
                 throw SSHServiceError.invalidPort
             }
 
+            var authentication = SSHAuthentication(
+                username: username,
+                method: .password(.init(password)),
+                hostKeyValidation: .acceptAll()
+            )
+            // Broaden cipher compatibility for servers that still require AES-CTR.
+            authentication.transportProtection.schemes = [.bundled, .aes128CTR]
+
             let connection = SSHConnection(
-                host: request.server.host,
+                host: host,
                 port: port,
-                authentication: SSHAuthentication(
-                    username: request.server.username,
-                    method: .password(.init(password)),
-                    hostKeyValidation: .acceptAll()
-                )
+                authentication: authentication
             )
 
             try await start(connection)
@@ -96,12 +117,12 @@ final class RealSSHService: SSHServiceProtocol {
         if response.status.exitStatus != 0 {
             throw SSHServiceError.remoteError(
                 combined.isEmpty
-                    ? "Command failed with exit status \(response.status.exitStatus)."
+                    ? "命令执行失败，退出码 \(response.status.exitStatus)。"
                     : combined
             )
         }
 
-        return combined.isEmpty ? "$ \(command)\n(exit 0)" : "$ \(command)\n\(combined)"
+        return combined.isEmpty ? "$ \(command)\n(退出码 0)" : "$ \(command)\n\(combined)"
     }
 
     private func start(_ connection: SSHConnection) async throws {

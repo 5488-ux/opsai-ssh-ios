@@ -24,18 +24,20 @@ final class AppStore: ObservableObject {
         password: String?,
         privateKey: String?
     ) throws {
-        if let password, let reference = server.passwordReference {
+        let normalizedServer = server.normalizedForSaving
+
+        if let password, let reference = normalizedServer.passwordReference {
             try keychain.save(secret: password, account: reference)
         }
 
-        if let privateKey, let reference = server.privateKeyReference {
+        if let privateKey, let reference = normalizedServer.privateKeyReference {
             try keychain.save(secret: privateKey, account: reference)
         }
 
-        if let index = servers.firstIndex(where: { $0.id == server.id }) {
-            servers[index] = server
+        if let index = servers.firstIndex(where: { $0.id == normalizedServer.id }) {
+            servers[index] = normalizedServer
         } else {
-            servers.append(server)
+            servers.append(normalizedServer)
         }
         servers.sort { $0.displayTitle.localizedCaseInsensitiveCompare($1.displayTitle) == .orderedAscending }
         storage.saveServers(servers)

@@ -3,7 +3,7 @@ import Foundation
 
 @MainActor
 final class TerminalSessionViewModel: ObservableObject {
-    @Published var terminalOutput = "Ready."
+    @Published var terminalOutput = "终端已就绪。"
     @Published var isConnected = false
     @Published var isBusy = false
     @Published var aiPrompt = ""
@@ -45,7 +45,7 @@ final class TerminalSessionViewModel: ObservableObject {
                 )
             )
             isConnected = true
-            appendOutput("Connected to \(server.host):\(server.port) as \(server.username).")
+            appendOutput("已连接到 \(server.host):\(server.port)，登录用户：\(server.username)。")
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -54,7 +54,7 @@ final class TerminalSessionViewModel: ObservableObject {
     func disconnect() async {
         await sshService.disconnect()
         isConnected = false
-        appendOutput("Disconnected.")
+        appendOutput("连接已断开。")
     }
 
     func generatePlan() async {
@@ -87,7 +87,7 @@ final class TerminalSessionViewModel: ObservableObject {
         }
 
         guard isConnected else {
-            errorMessage = "Connect to the server first."
+            errorMessage = "请先连接服务器。"
             return
         }
 

@@ -31,11 +31,11 @@ struct CommandDraftView: View {
                 Spacer()
 
                 if draft.approvedAt != nil {
-                    Label("Executed", systemImage: "checkmark.circle.fill")
+                    Label("已执行", systemImage: "checkmark.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.green)
                 } else if isDrafting {
-                    Label("Drafting", systemImage: "pencil.line")
+                    Label("生成中", systemImage: "pencil.line")
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }
@@ -46,7 +46,7 @@ struct CommandDraftView: View {
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Command")
+                Text("命令")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
 
@@ -62,7 +62,7 @@ struct CommandDraftView: View {
                     }
             }
 
-            Button(draft.approvedAt == nil ? "Approve and Run" : "Already Executed") {
+            Button(draft.approvedAt == nil ? "批准并执行" : "已执行") {
                 onApprove()
             }
             .buttonStyle(.borderedProminent)

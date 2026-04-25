@@ -16,9 +16,9 @@ enum AIServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidBaseURL:
-            return "AI base URL is invalid."
+            return "AI 接口地址无效。"
         case .missingAPIKey:
-            return "AI API key is missing."
+            return "AI 接口密钥未填写。"
         }
     }
 }
@@ -43,21 +43,21 @@ final class AIService: AIServiceProtocol {
 
         return AIPlan(
             userGoal: goal,
-            summary: "Start with low-risk inspection on \(server.host), then confirm service state and recent logs before proposing any write action.",
+            summary: "先对 \(server.host) 做低风险检查，再确认服务状态和最近日志，最后再决定是否需要写入类操作。",
             commands: [
                 .init(
                     command: "uname -a",
-                    reason: "Confirm the host and kernel before deeper troubleshooting.",
+                    reason: "先确认目标主机和内核信息，再继续深入排查。",
                     riskLevel: .low
                 ),
                 .init(
                     command: "uptime",
-                    reason: "Check system load and recent uptime.",
+                    reason: "查看系统负载和最近运行时长。",
                     riskLevel: .low
                 ),
                 .init(
                     command: "df -h",
-                    reason: "Verify disk pressure before investigating service failures.",
+                    reason: "先确认磁盘是否存在压力，再判断服务异常原因。",
                     riskLevel: .low
                 )
             ]
@@ -67,21 +67,21 @@ final class AIService: AIServiceProtocol {
     private func fallbackPlan(goal: String, server: SSHServer) -> AIPlan {
         AIPlan(
             userGoal: goal,
-            summary: "No API key is configured yet, so OpsAI generated a local safe-read inspection plan for \(server.host).",
+            summary: "当前还没有配置 API Key，所以 OpsAI 为 \(server.host) 生成了一份本地只读排查计划。",
             commands: [
                 .init(
                     command: "hostname",
-                    reason: "Verify which server you are connected to.",
+                    reason: "确认当前连接到的是哪台服务器。",
                     riskLevel: .low
                 ),
                 .init(
                     command: "whoami",
-                    reason: "Check the active remote account.",
+                    reason: "确认远端当前登录账号。",
                     riskLevel: .low
                 ),
                 .init(
                     command: "ps aux | head",
-                    reason: "Inspect the current process surface without changing state.",
+                    reason: "先只读查看当前进程概况，不修改系统状态。",
                     riskLevel: .low
                 )
             ]

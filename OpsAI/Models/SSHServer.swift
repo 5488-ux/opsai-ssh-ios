@@ -10,9 +10,9 @@ struct SSHServer: Identifiable, Codable, Equatable, Hashable {
         var displayName: String {
             switch self {
             case .password:
-                return "Password"
+                return "密码"
             case .privateKey:
-                return "Private Key"
+                return "私钥"
             }
         }
     }
@@ -54,5 +54,14 @@ struct SSHServer: Identifiable, Codable, Equatable, Hashable {
 
     var displayTitle: String {
         name.isEmpty ? host : name
+    }
+
+    var normalizedForSaving: SSHServer {
+        var copy = self
+        copy.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        copy.host = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        copy.username = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        copy.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        return copy
     }
 }

@@ -13,27 +13,27 @@ struct AISettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Provider") {
-                    TextField("Provider name", text: $config.providerName)
-                    TextField("Base URL", text: $config.baseURL)
+                Section("服务提供方") {
+                    TextField("提供方名称", text: $config.providerName)
+                    TextField("接口地址", text: $config.baseURL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.URL)
-                    TextField("Model", text: $config.model)
+                    TextField("模型", text: $config.model)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    SecureField("API key", text: $apiKey)
+                    SecureField("接口密钥", text: $apiKey)
                 }
 
-                Section("Behavior") {
-                    Toggle("Require approval for every command", isOn: $config.requireApprovalPerCommand)
-                    TextField("System prompt", text: $config.systemPrompt, axis: .vertical)
+                Section("行为设置") {
+                    Toggle("每条命令都必须人工批准", isOn: $config.requireApprovalPerCommand)
+                    TextField("系统提示词", text: $config.systemPrompt, axis: .vertical)
                         .lineLimit(4...8)
                 }
 
-                Section("Interaction") {
-                    Label("AI drafts commands progressively in a separate composer panel.", systemImage: "keyboard.badge.ellipsis")
-                    Label("Execution stays blocked until you approve a command.", systemImage: "checkmark.shield")
+                Section("交互说明") {
+                    Label("AI 会在独立的命令草稿区逐步生成命令。", systemImage: "keyboard.badge.ellipsis")
+                    Label("在你批准之前，命令不会执行。", systemImage: "checkmark.shield")
                 }
 
                 if let errorMessage {
@@ -43,10 +43,10 @@ struct AISettingsView: View {
                     }
                 }
             }
-            .navigationTitle("AI Settings")
+            .navigationTitle("AI 设置")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
+                    Button("保存") {
                         save()
                     }
                 }

@@ -10,7 +10,14 @@ struct AIPlan: Identifiable, Codable, Equatable {
             var id: String { rawValue }
 
             var displayName: String {
-                rawValue.capitalized
+                switch self {
+                case .low:
+                    return "低风险"
+                case .medium:
+                    return "中风险"
+                case .high:
+                    return "高风险"
+                }
             }
         }
 

@@ -39,7 +39,7 @@ struct TerminalWorkbenchView: View {
     private var connectionCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label(
-                viewModel.isConnected ? "Connected" : "Disconnected",
+                viewModel.isConnected ? "已连接" : "未连接",
                 systemImage: viewModel.isConnected ? "bolt.horizontal.circle.fill" : "bolt.horizontal.circle"
             )
             .font(.headline)
@@ -50,13 +50,13 @@ struct TerminalWorkbenchView: View {
                 .foregroundStyle(.secondary)
 
             HStack {
-                Button("Reconnect") {
+                Button("重新连接") {
                     Task { await viewModel.connect() }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isBusy)
 
-                Button("Disconnect") {
+                Button("断开连接") {
                     Task { await viewModel.disconnect() }
                 }
                 .buttonStyle(.bordered)
@@ -71,7 +71,7 @@ struct TerminalWorkbenchView: View {
 
     private var terminalCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Terminal")
+            Text("终端")
                 .font(.headline)
 
             Text(viewModel.terminalOutput)
@@ -90,20 +90,20 @@ struct TerminalWorkbenchView: View {
 
     private var aiPromptCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("AI Ops")
+            Text("AI 运维")
                 .font(.headline)
 
-            Text("Describe the issue. OpsAI will draft commands in its own composer panel instead of auto-sending a chat message.")
+            Text("描述你遇到的问题。OpsAI 会先生成命令草稿，不会自动直接发送和执行。")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            TextField("Example: check why nginx returns 502", text: $viewModel.aiPrompt, axis: .vertical)
+            TextField("例如：检查 nginx 为什么返回 502", text: $viewModel.aiPrompt, axis: .vertical)
                 .lineLimit(2...5)
                 .padding(12)
                 .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 14))
 
-            Button("Generate Command Plan") {
+            Button("生成命令计划") {
                 Task { await viewModel.generatePlan() }
             }
             .buttonStyle(.borderedProminent)
@@ -117,7 +117,7 @@ struct TerminalWorkbenchView: View {
 
     private func aiPlanCard(_ plan: AIPlan) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Command Plan")
+            Text("命令计划")
                 .font(.headline)
 
             Text(plan.summary)

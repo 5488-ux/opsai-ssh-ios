@@ -16,40 +16,40 @@ struct ServerEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Server") {
-                    TextField("Display name", text: $server.name)
-                    TextField("Host", text: $server.host)
+                Section("服务器信息") {
+                    TextField("显示名称", text: $server.name)
+                    TextField("主机地址", text: $server.host)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    TextField("Port", value: $server.port, format: .number)
+                    TextField("端口", value: $server.port, format: .number)
                         .keyboardType(.numberPad)
-                    TextField("Username", text: $server.username)
+                    TextField("用户名", text: $server.username)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 }
 
-                Section("Authentication") {
-                    Picker("Method", selection: $server.authenticationMethod) {
+                Section("认证方式") {
+                    Picker("方式", selection: $server.authenticationMethod) {
                         ForEach(SSHServer.AuthenticationMethod.allCases) { method in
                             Text(method.displayName).tag(method)
                         }
                     }
 
                     if server.authenticationMethod == .password {
-                        SecureField("Password", text: $password)
+                        SecureField("密码", text: $password)
                     } else {
-                        Text("Private key support is the next step. The real SSH connection in this build uses password login.")
+                        Text("当前版本暂不支持私钥登录。请切换为密码登录后再保存。")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
-                        TextField("Private key", text: $privateKey, axis: .vertical)
+                        TextField("私钥内容", text: $privateKey, axis: .vertical)
                             .lineLimit(5...10)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                     }
                 }
 
-                Section("Notes") {
-                    TextField("Optional notes", text: $server.notes, axis: .vertical)
+                Section("备注") {
+                    TextField("可选备注", text: $server.notes, axis: .vertical)
                         .lineLimit(2...5)
                 }
 
@@ -60,16 +60,16 @@ struct ServerEditorView: View {
                     }
                 }
             }
-            .navigationTitle(server.name.isEmpty ? "New Server" : "Edit Server")
+            .navigationTitle(server.name.isEmpty ? "新建服务器" : "编辑服务器")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") {
+                    Button("关闭") {
                         dismiss()
                     }
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
+                    Button("保存") {
                         save()
                     }
                 }
@@ -91,11 +91,23 @@ struct ServerEditorView: View {
         errorMessage = nil
 
         guard !server.host.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "Host is required."
+            errorMessage = "主机地址不能为空。"
             return
         }
         guard !server.username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "Username is required."
+            errorMessage = "用户名不能为空。"
+            return
+        }
+        guard (1...65535).contains(server.port) else {
+            errorMessage = "端口必须在 1 到 65535 之间。"
+            return
+        }
+        guard server.authenticationMethod != .privateKey else {
+            errorMessage = "当前版本暂不支持私钥登录，请改用密码登录。"
+            return
+        }
+        guard !password.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            errorMessage = "密码不能为空。"
             return
         }
 

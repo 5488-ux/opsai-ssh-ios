@@ -9,9 +9,9 @@ final class KeychainStore {
         var errorDescription: String? {
             switch self {
             case .unexpectedStatus(let status):
-                return "Keychain error: \(status)"
+                return "钥匙串错误：\(status)"
             case .invalidEncoding:
-                return "Unable to encode secret."
+                return "密钥内容编码失败。"
             }
         }
     }
