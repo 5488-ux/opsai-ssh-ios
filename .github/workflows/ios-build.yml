@@ -30,7 +30,7 @@ jobs:
             build
 
       - name: Prepare signing assets
-        if: ${{ secrets.IOS_P12_BASE64 != '' && secrets.IOS_MOBILEPROVISION_BASE64 != '' && secrets.IOS_TEAM_ID != '' && secrets.IOS_P12_PASSWORD != '' }}
+        if: ${{ secrets.IOS_P12_BASE64 != '' && secrets.IOS_MOBILEPROVISION_BASE64 != '' && secrets.IOS_TEAM_ID != '' && secrets.IOS_P12_PASSWORD != '' && secrets.IOS_BUNDLE_ID != '' && secrets.IOS_PROFILE_NAME != '' }}
         env:
           IOS_P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
           IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
@@ -48,22 +48,29 @@ jobs:
           cp $RUNNER_TEMP/signing/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Archive app
-        if: ${{ secrets.IOS_P12_BASE64 != '' && secrets.IOS_MOBILEPROVISION_BASE64 != '' && secrets.IOS_TEAM_ID != '' && secrets.IOS_P12_PASSWORD != '' }}
+        if: ${{ secrets.IOS_P12_BASE64 != '' && secrets.IOS_MOBILEPROVISION_BASE64 != '' && secrets.IOS_TEAM_ID != '' && secrets.IOS_P12_PASSWORD != '' && secrets.IOS_BUNDLE_ID != '' && secrets.IOS_PROFILE_NAME != '' }}
         env:
           IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          IOS_PROFILE_NAME: ${{ secrets.IOS_PROFILE_NAME }}
         run: |
           xcodebuild \
             -project OpsAI.xcodeproj \
             -scheme OpsAI \
             -configuration Release \
             -archivePath $RUNNER_TEMP/OpsAI.xcarchive \
+            CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=$IOS_TEAM_ID \
+            PRODUCT_BUNDLE_IDENTIFIER=$IOS_BUNDLE_ID \
+            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROFILE_NAME" \
             archive
 
       - name: Export IPA
-        if: ${{ secrets.IOS_P12_BASE64 != '' && secrets.IOS_MOBILEPROVISION_BASE64 != '' && secrets.IOS_TEAM_ID != '' && secrets.IOS_P12_PASSWORD != '' }}
+        if: ${{ secrets.IOS_P12_BASE64 != '' && secrets.IOS_MOBILEPROVISION_BASE64 != '' && secrets.IOS_TEAM_ID != '' && secrets.IOS_P12_PASSWORD != '' && secrets.IOS_BUNDLE_ID != '' && secrets.IOS_PROFILE_NAME != '' }}
         env:
           IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          IOS_PROFILE_NAME: ${{ secrets.IOS_PROFILE_NAME }}
         run: |
           cat > $RUNNER_TEMP/ExportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -76,6 +83,11 @@ jobs:
             <string>manual</string>
             <key>teamID</key>
             <string>${IOS_TEAM_ID}</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${IOS_BUNDLE_ID}</key>
+              <string>${IOS_PROFILE_NAME}</string>
+            </dict>
             <key>stripSwiftSymbols</key>
             <true/>
           </dict>
@@ -98,7 +110,7 @@ jobs:
             project.yml
 
       - name: Upload IPA
-        if: ${{ success() && secrets.IOS_P12_BASE64 != '' && secrets.IOS_MOBILEPROVISION_BASE64 != '' && secrets.IOS_TEAM_ID != '' && secrets.IOS_P12_PASSWORD != '' }}
+        if: ${{ success() && secrets.IOS_P12_BASE64 != '' && secrets.IOS_MOBILEPROVISION_BASE64 != '' && secrets.IOS_TEAM_ID != '' && secrets.IOS_P12_PASSWORD != '' && secrets.IOS_BUNDLE_ID != '' && secrets.IOS_PROFILE_NAME != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: opsai-ipa

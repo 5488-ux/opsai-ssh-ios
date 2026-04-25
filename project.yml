@@ -6,7 +6,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: 5.10
-    PRODUCT_BUNDLE_IDENTIFIER: com.opsai.app
+    PRODUCT_BUNDLE_IDENTIFIER: app.mango7143.test8374
 packages:
   SSHClient:
     url: https://github.com/gaetanzanella/swift-ssh-client
