@@ -6,6 +6,7 @@ xcuserdata/
 *.xcworkspace
 *.xcuserstate
 Secrets.xcconfig
+OpsAI/LocalAIConfig.json
 Pods/
 compat-cert.p12
 compat-cert.pem

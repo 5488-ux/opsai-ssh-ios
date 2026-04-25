@@ -17,6 +17,12 @@ final class AppStore: ObservableObject {
         self.keychain = keychain
         self.servers = storage.loadServers()
         self.providerConfig = storage.loadProviderConfig()
+
+        if providerConfig.apiKeyReference == nil {
+            providerConfig.apiKeyReference = AIProviderConfig.defaultAPIKeyReference
+        }
+
+        bootstrapLocalAIConfigIfNeeded()
     }
 
     func upsertServer(
@@ -60,14 +66,57 @@ final class AppStore: ObservableObject {
     }
 
     func saveProviderConfig(_ config: AIProviderConfig, apiKey: String?) throws {
-        if let apiKeyReference = config.apiKeyReference, let apiKey {
-            try keychain.save(secret: apiKey, account: apiKeyReference)
+        var updatedConfig = config
+        if updatedConfig.apiKeyReference == nil {
+            updatedConfig.apiKeyReference = AIProviderConfig.defaultAPIKeyReference
         }
-        providerConfig = config
-        storage.saveProviderConfig(config)
+
+        if let apiKeyReference = updatedConfig.apiKeyReference {
+            let trimmedAPIKey = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if trimmedAPIKey.isEmpty {
+                keychain.deleteSecret(account: apiKeyReference)
+            } else {
+                try keychain.save(secret: trimmedAPIKey, account: apiKeyReference)
+            }
+        }
+
+        providerConfig = updatedConfig
+        storage.saveProviderConfig(updatedConfig)
     }
 
     func providerAPIKey() -> String? {
         secret(for: providerConfig.apiKeyReference)
+    }
+
+    private func bootstrapLocalAIConfigIfNeeded() {
+        guard let localConfig = LocalAIConfigLoader.load() else {
+            return
+        }
+
+        var updatedConfig = providerConfig
+        if let providerName = localConfig.providerName, !providerName.isEmpty {
+            updatedConfig.providerName = providerName
+        }
+        if let baseURL = localConfig.baseURL, !baseURL.isEmpty {
+            updatedConfig.baseURL = baseURL
+        }
+        if let model = localConfig.model, !model.isEmpty {
+            updatedConfig.model = model
+        }
+        if updatedConfig.apiKeyReference == nil {
+            updatedConfig.apiKeyReference = AIProviderConfig.defaultAPIKeyReference
+        }
+
+        if let apiKey = localConfig.apiKey?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !apiKey.isEmpty,
+           let reference = updatedConfig.apiKeyReference,
+           keychain.loadSecret(account: reference) == nil {
+            try? keychain.save(secret: apiKey, account: reference)
+        }
+
+        if updatedConfig != providerConfig {
+            providerConfig = updatedConfig
+            storage.saveProviderConfig(updatedConfig)
+        }
     }
 }

@@ -1,0 +1,6 @@
+{
+  "providerName": "DeepSeek",
+  "baseURL": "https://api.deepseek.com",
+  "model": "deepseek-v4-flash",
+  "apiKey": "replace-with-your-api-key"
+}
