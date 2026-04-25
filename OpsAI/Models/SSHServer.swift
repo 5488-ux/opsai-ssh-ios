@@ -1,7 +1,7 @@
 import Foundation
 
-struct SSHServer: Identifiable, Codable, Equatable {
-    enum AuthenticationMethod: String, Codable, CaseIterable, Identifiable {
+struct SSHServer: Identifiable, Codable, Equatable, Hashable {
+    enum AuthenticationMethod: String, Codable, CaseIterable, Identifiable, Hashable {
         case password
         case privateKey
 
