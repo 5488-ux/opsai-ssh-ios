@@ -11,8 +11,17 @@ final class TerminalSessionViewModel: ObservableObject {
     @Published var aiPlan: AIPlan?
     @Published var draftingCommandIDs: Set<UUID> = []
     @Published var errorMessage: String?
+    @Published var conversation: [AIOpsChatMessage] = [
+        .init(role: .assistant, text: "我是你的运维助手。你可以直接描述问题，我会先给出判断，再生成可批准执行的命令计划。")
+    ]
 
     let server: SSHServer
+    let quickPrompts = [
+        "检查服务器负载为什么变高",
+        "看看磁盘空间是否快满了",
+        "排查 nginx 返回 502 的原因",
+        "检查 Docker 容器状态"
+    ]
 
     private let sshService: SSHServiceProtocol
     private let aiService: AIServiceProtocol
@@ -58,9 +67,14 @@ final class TerminalSessionViewModel: ObservableObject {
         appendOutput("连接已断开。")
     }
 
-    func generatePlan() async {
-        let trimmedGoal = aiPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedGoal.isEmpty else {
+    func useQuickPrompt(_ prompt: String) async {
+        aiPrompt = prompt
+        await sendAIOpsMessage()
+    }
+
+    func sendAIOpsMessage() async {
+        let trimmedPrompt = aiPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedPrompt.isEmpty else {
             errorMessage = "请先输入你要排查的问题。"
             return
         }
@@ -68,17 +82,24 @@ final class TerminalSessionViewModel: ObservableObject {
         isBusy = true
         errorMessage = nil
         aiPlan = nil
+
+        let userMessage = AIOpsChatMessage(role: .user, text: trimmedPrompt)
+        conversation.append(userMessage)
+        aiPrompt = ""
+
         defer { isBusy = false }
 
         do {
-            let plan = try await aiService.buildPlan(
-                goal: trimmedGoal,
+            let response = try await aiService.askAssistant(
+                prompt: trimmedPrompt,
+                history: conversation,
                 server: server,
                 config: appStore.providerConfig,
                 apiKey: appStore.providerAPIKey()
             )
-            aiPlan = plan
-            await animateDrafting(for: plan.commands)
+            conversation.append(.init(role: .assistant, text: response.reply))
+            aiPlan = response.plan
+            await animateDrafting(for: response.plan.commands)
         } catch {
             errorMessage = error.localizedDescription
         }

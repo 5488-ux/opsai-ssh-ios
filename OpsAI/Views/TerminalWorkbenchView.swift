@@ -13,7 +13,7 @@ struct TerminalWorkbenchView: View {
                 connectionCard
                 terminalCard
                 manualCommandCard
-                aiPromptCard
+                aiChatCard
 
                 if let plan = viewModel.aiPlan {
                     aiPlanCard(plan)
@@ -117,23 +117,26 @@ struct TerminalWorkbenchView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
-    private var aiPromptCard: some View {
+    private var aiChatCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("AI 运维")
                 .font(.headline)
 
-            Text("描述你遇到的问题。OpsAI 会先生成命令草稿，不会自动直接执行。")
+            Text("像面板助手一样直接对话。AI 会先回答，再给出可批准执行的命令计划。")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            TextField("例如：检查 nginx 为什么返回 502", text: $viewModel.aiPrompt, axis: .vertical)
+            quickPromptRow
+            conversationList
+
+            TextField("例如：排查 nginx 为什么返回 502", text: $viewModel.aiPrompt, axis: .vertical)
                 .lineLimit(2...5)
                 .padding(12)
                 .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 14))
 
-            Button("生成命令计划") {
-                Task { await viewModel.generatePlan() }
+            Button(viewModel.isBusy ? "发送中..." : "发送问题") {
+                Task { await viewModel.sendAIOpsMessage() }
             }
             .buttonStyle(.borderedProminent)
             .disabled(viewModel.aiPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isBusy)
@@ -142,6 +145,53 @@ struct TerminalWorkbenchView: View {
         .padding(16)
         .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
+    private var quickPromptRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(viewModel.quickPrompts, id: \.self) { prompt in
+                    Button(prompt) {
+                        Task { await viewModel.useQuickPrompt(prompt) }
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.footnote)
+                    .disabled(viewModel.isBusy)
+                }
+            }
+        }
+    }
+
+    private var conversationList: some View {
+        VStack(spacing: 10) {
+            ForEach(viewModel.conversation) { message in
+                HStack {
+                    if message.role == .assistant {
+                        messageBubble(message, color: Color(.secondarySystemBackground), textColor: .primary)
+                        Spacer(minLength: 28)
+                    } else {
+                        Spacer(minLength: 28)
+                        messageBubble(message, color: Color.accentColor.opacity(0.14), textColor: .primary)
+                    }
+                }
+            }
+        }
+    }
+
+    private func messageBubble(_ message: AIOpsChatMessage, color: Color, textColor: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(message.role == .assistant ? "AI 助手" : "你")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(message.text)
+                .font(.subheadline)
+                .foregroundStyle(textColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(12)
+        .background(color)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     private func aiPlanCard(_ plan: AIPlan) -> some View {

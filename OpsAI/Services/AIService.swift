@@ -1,12 +1,18 @@
 import Foundation
 
+struct AIOpsAssistantResponse: Equatable {
+    let reply: String
+    let plan: AIPlan
+}
+
 protocol AIServiceProtocol {
-    func buildPlan(
-        goal: String,
+    func askAssistant(
+        prompt: String,
+        history: [AIOpsChatMessage],
         server: SSHServer,
         config: AIProviderConfig,
         apiKey: String?
-    ) async throws -> AIPlan
+    ) async throws -> AIOpsAssistantResponse
 
     func testConnection(
         config: AIProviderConfig,
@@ -35,19 +41,33 @@ enum AIServiceError: LocalizedError {
 }
 
 final class AIService: AIServiceProtocol {
-    func buildPlan(
-        goal: String,
+    func askAssistant(
+        prompt: String,
+        history: [AIOpsChatMessage],
         server: SSHServer,
         config: AIProviderConfig,
         apiKey: String?
-    ) async throws -> AIPlan {
+    ) async throws -> AIOpsAssistantResponse {
+        let trimmedKey = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmedKey.isEmpty else {
+            let plan = fallbackPlan(goal: prompt, server: server)
+            return AIOpsAssistantResponse(
+                reply: "当前还没有配置 AI 接口密钥。我先给你一份本地只读排查计划，你可以先按这些命令检查。",
+                plan: plan
+            )
+        }
+
         guard let endpoint = makeEndpointURL(from: config.baseURL, suffix: "/chat/completions") else {
             throw AIServiceError.invalidBaseURL
         }
 
-        let trimmedKey = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !trimmedKey.isEmpty else {
-            return fallbackPlan(goal: goal, server: server)
+        let contextLines = history.suffix(6).map { message in
+            switch message.role {
+            case .user:
+                return "用户：\(message.text)"
+            case .assistant:
+                return "助手：\(message.text)"
+            }
         }
 
         let requestBody = DeepSeekChatRequest(
@@ -58,9 +78,12 @@ final class AIService: AIServiceProtocol {
                     role: "system",
                     content: [
                         config.systemPrompt,
+                        "你是运维对话助手。",
                         "你必须只返回 JSON 对象。",
                         "返回格式必须是：",
-                        "{\"summary\":\"字符串\",\"commands\":[{\"command\":\"字符串\",\"reason\":\"字符串\",\"riskLevel\":\"low|medium|high\"}]}",
+                        "{\"reply\":\"字符串\",\"summary\":\"字符串\",\"commands\":[{\"command\":\"字符串\",\"reason\":\"字符串\",\"riskLevel\":\"low|medium|high\"}]}",
+                        "reply 是给用户的自然语言回答，要求简洁明确。",
+                        "summary 是命令计划摘要。",
                         "commands 数量限制为 1 到 4 条。",
                         "优先生成只读命令。",
                         "不要返回 markdown 代码块。",
@@ -71,8 +94,9 @@ final class AIService: AIServiceProtocol {
                     role: "user",
                     content: [
                         "目标服务器：\(server.username)@\(server.host):\(server.port)",
-                        "用户诉求：\(goal)"
-                    ].joined(separator: "\n")
+                        contextLines.isEmpty ? "历史对话：无" : "历史对话：\n" + contextLines.joined(separator: "\n"),
+                        "本次问题：\(prompt)"
+                    ].joined(separator: "\n\n")
                 )
             ],
             temperature: 0.2
@@ -92,10 +116,10 @@ final class AIService: AIServiceProtocol {
         }
 
         let payloadData = Data(stripCodeFences(from: rawContent).utf8)
-        let payload = try JSONDecoder().decode(DeepSeekPlanPayload.self, from: payloadData)
+        let payload = try JSONDecoder().decode(DeepSeekAssistantPayload.self, from: payloadData)
 
-        return AIPlan(
-            userGoal: goal,
+        let plan = AIPlan(
+            userGoal: prompt,
             summary: payload.summary,
             commands: payload.commands.prefix(4).map {
                 AIPlan.CommandDraft(
@@ -106,6 +130,8 @@ final class AIService: AIServiceProtocol {
                 )
             }
         )
+
+        return AIOpsAssistantResponse(reply: payload.reply, plan: plan)
     }
 
     func testConnection(
@@ -121,7 +147,13 @@ final class AIService: AIServiceProtocol {
             throw AIServiceError.missingAPIKey
         }
 
-        let data = try await sendRequest(url: endpoint, method: "GET", apiKey: trimmedKey, body: Optional<EmptyBody>.none)
+        let data = try await sendRequest(
+            url: endpoint,
+            method: "GET",
+            apiKey: trimmedKey,
+            body: Optional<EmptyBody>.none
+        )
+
         let modelList = try JSONDecoder().decode(DeepSeekModelsResponse.self, from: data)
         let modelIDs = modelList.data.map(\.id)
 
@@ -182,7 +214,11 @@ final class AIService: AIServiceProtocol {
         }
 
         if trimmed.hasSuffix("/chat/completions") {
-            trimmed.removeLast("/chat/completions".count)
+            trimmed = String(trimmed.dropLast("/chat/completions".count))
+        }
+
+        if trimmed.hasSuffix("/models") {
+            trimmed = String(trimmed.dropLast("/models".count))
         }
 
         return URL(string: trimmed + suffix)
@@ -277,13 +313,14 @@ private struct DeepSeekModelsResponse: Decodable {
     let data: [Model]
 }
 
-private struct DeepSeekPlanPayload: Decodable {
+private struct DeepSeekAssistantPayload: Decodable {
     struct Command: Decodable {
         let command: String
         let reason: String
         let riskLevel: AIPlan.CommandDraft.RiskLevel
     }
 
+    let reply: String
     let summary: String
     let commands: [Command]
 }
