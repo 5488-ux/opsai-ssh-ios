@@ -84,7 +84,18 @@ final class RealSSHService: SSHServiceProtocol {
                 authentication: authentication
             )
 
-            try await start(connection)
+            do {
+                try await start(connection)
+            } catch let error as SSHConnectionError {
+                throw mapConnectionError(
+                    error,
+                    host: host,
+                    port: Int(port),
+                    authenticationMethod: request.server.authenticationMethod
+                )
+            } catch {
+                throw SSHServiceError.remoteError("SSH 连接失败：\(error.localizedDescription)")
+            }
             self.connection = connection
         case .privateKey:
             throw SSHServiceError.unsupportedAuthenticationMethod
@@ -130,6 +141,34 @@ final class RealSSHService: SSHServiceProtocol {
             connection.start { result in
                 continuation.resume(with: result)
             }
+        }
+    }
+
+    private func mapConnectionError(
+        _ error: SSHConnectionError,
+        host: String,
+        port: Int,
+        authenticationMethod: SSHServer.AuthenticationMethod
+    ) -> SSHServiceError {
+        switch error {
+        case .timeout:
+            return .remoteError("SSH 连接超时：\(host):\(port)。请检查服务器是否在线、端口是否开放，以及网络或防火墙是否拦截。")
+        case .requireActiveConnection:
+            return .remoteError("SSH 连接未建立成功，当前会话不是活动状态。")
+        case .unknown:
+            let authHint: String
+            switch authenticationMethod {
+            case .password:
+                authHint = "请确认服务器允许密码登录，或不是仅支持 keyboard-interactive / 私钥登录。"
+            case .privateKey:
+                authHint = "当前版本暂不支持私钥登录。"
+            }
+
+            return .remoteError(
+                "SSH 连接失败：\(host):\(port)。这通常表示地址或端口错误、账号密码不对、服务器认证方式不兼容，或服务器只支持当前库未覆盖的旧算法。\(authHint)"
+            )
+        @unknown default:
+            return .remoteError("SSH 连接失败：\(error.localizedDescription)")
         }
     }
 
