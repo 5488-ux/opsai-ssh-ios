@@ -32,13 +32,9 @@ struct TerminalWorkbenchView: View {
             }
             .padding(16)
         }
-        .background(OpsAITheme.background.ignoresSafeArea())
+        .background(Color(.systemGroupedBackground))
         .navigationTitle(viewModel.server.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .tint(OpsAITheme.cyan)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .toolbarBackground(OpsAITheme.deepNavy, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
         .task {
             if !viewModel.isConnected {
                 await viewModel.connect()
@@ -55,11 +51,11 @@ struct TerminalWorkbenchView: View {
                         systemImage: viewModel.isConnected ? "bolt.horizontal.circle.fill" : "bolt.horizontal.circle"
                     )
                     .font(.headline)
-                    .foregroundStyle(viewModel.isConnected ? OpsAITheme.cyan : OpsAITheme.mutedText)
+                    .foregroundStyle(viewModel.isConnected ? .green : .secondary)
 
                     Text("\(viewModel.server.username)@\(viewModel.server.host):\(viewModel.server.port)")
                         .font(.subheadline)
-                        .foregroundStyle(OpsAITheme.mutedText)
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -89,7 +85,6 @@ struct TerminalWorkbenchView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .font(.title3)
-                        .foregroundStyle(OpsAITheme.cyan)
                 }
             }
 
@@ -103,15 +98,16 @@ struct TerminalWorkbenchView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Label("绑定域名", systemImage: "globe")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(OpsAITheme.mutedText)
+                        .foregroundStyle(.secondary)
 
                     domainTagWrap(domains: viewModel.boundDomains)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .foregroundStyle(OpsAITheme.text)
-        .opsCard()
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
     private var terminalCard: some View {
@@ -123,17 +119,16 @@ struct TerminalWorkbenchView: View {
                 .font(.system(.footnote, design: .monospaced))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
-                .background(OpsAITheme.deepNavy.opacity(0.95))
-                .foregroundStyle(OpsAITheme.cyan)
+                .background(Color.black.opacity(0.9))
+                .foregroundStyle(.green)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
 
             TextField("例如：uname -a", text: $viewModel.manualCommand, axis: .vertical)
                 .lineLimit(1...4)
                 .font(.system(.body, design: .monospaced))
                 .padding(12)
-                .background(OpsAITheme.cardElevated)
+                .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                .foregroundStyle(OpsAITheme.text)
 
             Button("执行命令") {
                 Task { await viewModel.runManualCommand() }
@@ -142,8 +137,9 @@ struct TerminalWorkbenchView: View {
             .disabled(viewModel.manualCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isBusy)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .foregroundStyle(OpsAITheme.text)
-        .opsCard()
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
     private var aiChatCard: some View {
@@ -158,8 +154,8 @@ struct TerminalWorkbenchView: View {
                     .font(.caption.weight(.semibold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(OpsAITheme.cyan.opacity(0.14))
-                    .foregroundStyle(OpsAITheme.cyan)
+                    .background(Color.green.opacity(0.14))
+                    .foregroundStyle(.green)
                     .clipShape(Capsule())
             }
 
@@ -171,9 +167,8 @@ struct TerminalWorkbenchView: View {
             TextField(viewModel.selectedAssistant.promptPlaceholder, text: $viewModel.aiPrompt, axis: .vertical)
                 .lineLimit(2...5)
                 .padding(12)
-                .background(OpsAITheme.cardElevated)
+                .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                .foregroundStyle(OpsAITheme.text)
 
             Button(viewModel.isBusy ? "发送中..." : "发送问题") {
                 Task { await viewModel.sendAIOpsMessage() }
@@ -182,8 +177,9 @@ struct TerminalWorkbenchView: View {
             .disabled(viewModel.aiPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isBusy)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .foregroundStyle(OpsAITheme.text)
-        .opsCard()
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
     private var assistantPickerRow: some View {
@@ -199,11 +195,10 @@ struct TerminalWorkbenchView: View {
                             .padding(.vertical, 9)
                         .background(
                             viewModel.selectedAssistant == assistant
-                                ? OpsAITheme.cyan.opacity(0.18)
-                                : OpsAITheme.cardElevated
+                                ? Color.accentColor.opacity(0.16)
+                                : Color(.secondarySystemBackground)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .foregroundStyle(viewModel.selectedAssistant == assistant ? OpsAITheme.cyan : OpsAITheme.text)
                     }
                     .buttonStyle(.plain)
                     .disabled(viewModel.isBusy)
@@ -237,7 +232,7 @@ struct TerminalWorkbenchView: View {
 
                         Text(tool.shortDescription)
                             .font(.footnote)
-                            .foregroundStyle(OpsAITheme.mutedText)
+                            .foregroundStyle(.secondary)
 
                         HStack {
                             Button("运行") {
@@ -255,7 +250,7 @@ struct TerminalWorkbenchView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
-                    .background(OpsAITheme.cardElevated)
+                    .background(Color(.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
             }
@@ -269,17 +264,17 @@ struct TerminalWorkbenchView: View {
             if viewModel.conversation.count > 6 {
                 Text("仅显示最近 \(min(viewModel.conversation.count, 6)) 条对话")
                     .font(.caption)
-                    .foregroundStyle(OpsAITheme.mutedText)
+                    .foregroundStyle(.secondary)
             }
 
             ForEach(Array(viewModel.conversation.suffix(6))) { message in
                 HStack {
                     if message.role == .assistant {
-                        messageBubble(message, color: OpsAITheme.cardElevated, textColor: OpsAITheme.text)
+                        messageBubble(message, color: Color(.secondarySystemBackground), textColor: .primary)
                         Spacer(minLength: 28)
                     } else {
                         Spacer(minLength: 28)
-                        messageBubble(message, color: OpsAITheme.cyan.opacity(0.16), textColor: OpsAITheme.text)
+                        messageBubble(message, color: Color.accentColor.opacity(0.14), textColor: .primary)
                     }
                 }
             }
@@ -290,7 +285,7 @@ struct TerminalWorkbenchView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(message.role == .assistant ? viewModel.selectedAssistant.displayName : "你")
                 .font(.caption)
-                .foregroundStyle(OpsAITheme.mutedText)
+                .foregroundStyle(.secondary)
 
             Text(message.text)
                 .font(.subheadline)
@@ -309,7 +304,7 @@ struct TerminalWorkbenchView: View {
 
             Text(plan.summary)
                 .font(.subheadline)
-                .foregroundStyle(OpsAITheme.mutedText)
+                .foregroundStyle(.secondary)
 
             ForEach(plan.commands) { draft in
                 CommandDraftView(
@@ -333,8 +328,9 @@ struct TerminalWorkbenchView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .foregroundStyle(OpsAITheme.text)
-        .opsCard()
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
     private func serverConfigCard(_ snapshot: ServerConfigSnapshot) -> some View {
@@ -355,7 +351,7 @@ struct TerminalWorkbenchView: View {
 
             Text("扫描时间：\(snapshot.scannedAt.formatted(date: .abbreviated, time: .shortened))")
                 .font(.caption)
-                .foregroundStyle(OpsAITheme.mutedText)
+                .foregroundStyle(.secondary)
 
             configRow(title: "主机", value: snapshot.hostName)
             configRow(title: "系统", value: snapshot.operatingSystem)
@@ -367,7 +363,7 @@ struct TerminalWorkbenchView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("监听端口")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(OpsAITheme.mutedText)
+                        .foregroundStyle(.secondary)
                     domainTagWrap(domains: snapshot.listeningPorts)
                 }
             }
@@ -375,7 +371,7 @@ struct TerminalWorkbenchView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("服务状态")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(OpsAITheme.mutedText)
+                    .foregroundStyle(.secondary)
 
                 ForEach(snapshot.services) { service in
                     HStack(alignment: .top) {
@@ -393,22 +389,23 @@ struct TerminalWorkbenchView: View {
 
                         Text(service.detail)
                             .font(.footnote)
-                            .foregroundStyle(OpsAITheme.mutedText)
+                            .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .foregroundStyle(OpsAITheme.text)
-        .opsCard()
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 
     private func configRow(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(OpsAITheme.mutedText)
+                .foregroundStyle(.secondary)
             Text(value)
                 .font(.subheadline)
         }
@@ -425,7 +422,7 @@ struct TerminalWorkbenchView: View {
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 5)
-                        .background(OpsAITheme.cardElevated)
+                        .background(Color(.secondarySystemBackground))
                         .clipShape(Capsule())
                 }
             }
@@ -433,7 +430,7 @@ struct TerminalWorkbenchView: View {
             if domains.count > 4 {
                 Text("还有 \(domains.count - 4) 个域名")
                     .font(.caption)
-                    .foregroundStyle(OpsAITheme.mutedText)
+                    .foregroundStyle(.secondary)
             }
         }
     }
